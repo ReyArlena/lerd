@@ -18,7 +18,7 @@ type serviceInfo struct {
 var serviceEnvVars = map[string]serviceInfo{
 	"mysql": {envVars: []string{
 		"DB_CONNECTION=mysql",
-		"DB_HOST=127.0.0.1",
+		"DB_HOST=lerd-mysql",
 		"DB_PORT=3306",
 		"DB_DATABASE=lerd",
 		"DB_USERNAME=root",
@@ -26,14 +26,14 @@ var serviceEnvVars = map[string]serviceInfo{
 	}},
 	"postgres": {envVars: []string{
 		"DB_CONNECTION=pgsql",
-		"DB_HOST=127.0.0.1",
+		"DB_HOST=lerd-postgres",
 		"DB_PORT=5432",
 		"DB_DATABASE=lerd",
 		"DB_USERNAME=postgres",
 		"DB_PASSWORD=lerd",
 	}},
 	"redis": {envVars: []string{
-		"REDIS_HOST=127.0.0.1",
+		"REDIS_HOST=lerd-redis",
 		"REDIS_PORT=6379",
 		"REDIS_PASSWORD=null",
 		"CACHE_STORE=redis",
@@ -42,7 +42,7 @@ var serviceEnvVars = map[string]serviceInfo{
 	}},
 	"meilisearch": {envVars: []string{
 		"SCOUT_DRIVER=meilisearch",
-		"MEILISEARCH_HOST=http://127.0.0.1:7700",
+		"MEILISEARCH_HOST=http://lerd-meilisearch:7700",
 	}},
 	"minio": {envVars: []string{
 		"FILESYSTEM_DISK=s3",
@@ -50,8 +50,8 @@ var serviceEnvVars = map[string]serviceInfo{
 		"AWS_SECRET_ACCESS_KEY=lerdpassword",
 		"AWS_DEFAULT_REGION=us-east-1",
 		"AWS_BUCKET=lerd",
-		"AWS_URL=http://127.0.0.1:9000",
-		"AWS_ENDPOINT=http://127.0.0.1:9000",
+		"AWS_URL=http://lerd-minio:9000",
+		"AWS_ENDPOINT=http://lerd-minio:9000",
 		"AWS_USE_PATH_STYLE_ENDPOINT=true",
 	}},
 }
