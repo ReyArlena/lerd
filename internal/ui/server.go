@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/geodro/lerd/internal/certs"
 	"github.com/geodro/lerd/internal/config"
 	"github.com/geodro/lerd/internal/dns"
+	"github.com/geodro/lerd/internal/nginx"
 	phpPkg "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 )
@@ -109,6 +111,8 @@ func Start(currentVersion string) error {
 	mux.HandleFunc("/api/update", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		handleUpdate(w, r, currentVersion)
 	}))
+	mux.HandleFunc("/api/php-versions", withCORS(handlePHPVersions))
+	mux.HandleFunc("/api/node-versions", withCORS(handleNodeVersions))
 	mux.HandleFunc("/api/sites/", withCORS(handleSiteAction))
 	mux.HandleFunc("/api/logs/", withCORS(handleLogs))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -418,6 +422,39 @@ type UpdateResponse struct {
 	Output string `json:"output"`
 }
 
+func handlePHPVersions(w http.ResponseWriter, _ *http.Request) {
+	versions, _ := phpPkg.ListInstalled()
+	if versions == nil {
+		versions = []string{}
+	}
+	writeJSON(w, versions)
+}
+
+func handleNodeVersions(w http.ResponseWriter, _ *http.Request) {
+	fnmPath := config.BinDir() + "/fnm"
+	cmd := exec.Command(fnmPath, "list")
+	out, err := cmd.Output()
+	if err != nil {
+		writeJSON(w, []string{})
+		return
+	}
+	var versions []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		// fnm list output: "* v20.0.0 default" or "  v18.0.0"
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "* ")
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		v := strings.TrimPrefix(fields[0], "v")
+		if v != "" {
+			versions = append(versions, v)
+		}
+	}
+	writeJSON(w, versions)
+}
+
 // SiteActionResponse is returned by POST /api/sites/{domain}/secure|unsecure.
 type SiteActionResponse struct {
 	OK    bool   `json:"ok"`
@@ -452,6 +489,45 @@ func handleSiteAction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		site.Secured = false
+	case "php":
+		version := r.URL.Query().Get("version")
+		if version == "" {
+			writeJSON(w, SiteActionResponse{Error: "version parameter required"})
+			return
+		}
+		// Write .php-version into project directory
+		if err := os.WriteFile(filepath.Join(site.Path, ".php-version"), []byte(version+"\n"), 0644); err != nil {
+			writeJSON(w, SiteActionResponse{Error: "writing .php-version: " + err.Error()})
+			return
+		}
+		site.PHPVersion = version
+		// Regenerate vhost with new PHP version
+		if site.Secured {
+			if err := certs.SecureSite(*site); err != nil {
+				writeJSON(w, SiteActionResponse{Error: "regenerating SSL vhost: " + err.Error()})
+				return
+			}
+		} else {
+			if err := nginx.GenerateVhost(*site, version); err != nil {
+				writeJSON(w, SiteActionResponse{Error: "regenerating vhost: " + err.Error()})
+				return
+			}
+			if err := nginx.Reload(); err != nil {
+				writeJSON(w, SiteActionResponse{Error: "reloading nginx: " + err.Error()})
+				return
+			}
+		}
+	case "node":
+		version := r.URL.Query().Get("version")
+		if version == "" {
+			writeJSON(w, SiteActionResponse{Error: "version parameter required"})
+			return
+		}
+		if err := os.WriteFile(filepath.Join(site.Path, ".node-version"), []byte(version+"\n"), 0644); err != nil {
+			writeJSON(w, SiteActionResponse{Error: "writing .node-version: " + err.Error()})
+			return
+		}
+		site.NodeVersion = version
 	default:
 		http.NotFound(w, r)
 		return

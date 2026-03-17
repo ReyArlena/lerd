@@ -153,8 +153,32 @@
                         ></a>
                       </td>
                       <td class="px-4 py-3 text-gray-600 font-mono text-xs truncate max-w-xs" x-text="site.path"></td>
-                      <td class="px-4 py-3 text-gray-600" x-text="site.php_version || '—'"></td>
-                      <td class="px-4 py-3 text-gray-600" x-text="site.node_version || '—'"></td>
+                      <td class="px-4 py-3" @click.stop>
+                        <select
+                          x-model="site.php_version"
+                          @change="setSiteVersion(site, 'php', site.php_version)"
+                          class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-400 disabled:opacity-50 cursor-pointer"
+                          :disabled="site.versionLoading"
+                        >
+                          <option value="" disabled>—</option>
+                          <template x-for="v in phpVersions" :key="v">
+                            <option :value="v" x-text="'PHP ' + v"></option>
+                          </template>
+                        </select>
+                      </td>
+                      <td class="px-4 py-3" @click.stop>
+                        <select
+                          x-model="site.node_version"
+                          @change="setSiteVersion(site, 'node', site.node_version)"
+                          class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-400 disabled:opacity-50 cursor-pointer"
+                          :disabled="site.versionLoading"
+                        >
+                          <option value="" disabled>—</option>
+                          <template x-for="v in nodeVersions" :key="v">
+                            <option :value="v" x-text="'Node ' + v"></option>
+                          </template>
+                        </select>
+                      </td>
                       <td class="px-4 py-3" @click.stop>
                         <div class="flex flex-col items-start gap-1">
                           <button
@@ -440,6 +464,8 @@ function lerdApp() {
     tab: 'sites',
     sites: [],
     sitesLoading: false,
+    phpVersions: [],
+    nodeVersions: [],
     services: [],
     servicesLoading: false,
     systemStatus: {},
@@ -465,6 +491,8 @@ function lerdApp() {
     init() {
       this.loadVersion();
       this.loadSites();
+      this.loadPHPVersions();
+      this.loadNodeVersions();
       this.loadServices();
       this.loadStatus();
       this._statusInterval = setInterval(() => {
@@ -524,7 +552,7 @@ function lerdApp() {
       try {
         const res = await fetch('/api/sites');
         const raw = await res.json();
-        this.sites = raw.map(s => ({ ...s, tlsLoading: false, tlsError: '' }));
+        this.sites = raw.map(s => ({ ...s, tlsLoading: false, tlsError: '', versionLoading: false }));
       } catch (_) {
         this.sites = [];
       } finally {
@@ -593,6 +621,37 @@ function lerdApp() {
       }
       svc.copied = true;
       setTimeout(() => { svc.copied = false; }, 2000);
+    },
+
+    async loadPHPVersions() {
+      try {
+        const res = await fetch('/api/php-versions');
+        this.phpVersions = await res.json();
+      } catch (_) {}
+    },
+
+    async loadNodeVersions() {
+      try {
+        const res = await fetch('/api/node-versions');
+        this.nodeVersions = await res.json();
+      } catch (_) {}
+    },
+
+    async setSiteVersion(site, type, version) {
+      if (!version) return;
+      site.versionLoading = true;
+      try {
+        const res = await fetch(`/api/sites/${site.domain}/${type}?version=${encodeURIComponent(version)}`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) {
+          // Revert on failure — reload sites to get actual state
+          await this.loadSites();
+        }
+      } catch (_) {
+        await this.loadSites();
+      } finally {
+        site.versionLoading = false;
+      }
     },
 
     async toggleTLS(site) {

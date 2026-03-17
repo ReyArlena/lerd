@@ -7,6 +7,14 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.39] — 2026-03-17
+
+### Added
+
+- PHP and Node columns in the Sites tab are now dropdowns — selecting a version writes `.php-version` / `.node-version` to the project directory, updates `sites.yaml`, regenerates the nginx vhost, and reloads nginx; available PHP versions come from installed FPM quadlets, Node versions from `fnm list`
+
+---
+
 ## [0.1.38] — 2026-03-17
 
 ### Fixed
