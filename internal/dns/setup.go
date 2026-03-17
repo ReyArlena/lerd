@@ -73,8 +73,13 @@ func defaultInterface() string {
 	if err != nil {
 		return ""
 	}
+	return parseDefaultIface(string(out))
+}
+
+// parseDefaultIface extracts the interface name from `ip route show default` output.
+func parseDefaultIface(output string) string {
 	// "default via 192.168.1.1 dev enp1s0 ..."
-	parts := strings.Fields(string(out))
+	parts := strings.Fields(output)
 	for i, p := range parts {
 		if p == "dev" && i+1 < len(parts) {
 			return parts[i+1]
@@ -83,31 +88,45 @@ func defaultInterface() string {
 	return ""
 }
 
-// readUpstreamDNS returns upstream DNS server IPs from the running system.
-// Sources tried in order:
-//  1. /run/systemd/resolve/resolv.conf — real upstreams on systemd-resolved systems
-//  2. nmcli — DHCP-provided DNS from NetworkManager
-//  3. /etc/resolv.conf — fallback
-//
-// Returns nil if nothing is found; callers should omit no-resolv in that case.
-func readUpstreamDNS() []string {
-	for _, path := range []string{"/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"} {
-		if servers := parseNameservers(path); len(servers) > 0 {
-			return servers
-		}
-	}
-	return nmcliDNS()
-}
+// resolvPaths is the ordered list of resolv.conf files to try for upstream DNS detection.
+// Overridable in tests.
+var resolvPaths = []string{"/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"}
 
-// nmcliDNS reads DHCP-assigned DNS servers from NetworkManager via nmcli.
-func nmcliDNS() []string {
+// nmcliDNSFunc is the function used to get DHCP DNS via nmcli. Overridable in tests.
+var nmcliDNSFunc = func() []string {
 	out, err := exec.Command("nmcli", "-g", "IP4.DNS", "device", "show").Output()
 	if err != nil {
 		return nil
 	}
+	return parseNmcliLines(string(out))
+}
+
+// readUpstreamDNS returns upstream DNS server IPs from the running system.
+// Sources tried in order:
+//  1. /run/systemd/resolve/resolv.conf — real upstreams on systemd-resolved systems
+//  2. /etc/resolv.conf — fallback
+//  3. nmcli — DHCP-provided DNS from NetworkManager
+//
+// Returns nil if nothing is found; callers should omit no-resolv in that case.
+func readUpstreamDNS() []string {
+	for _, path := range resolvPaths {
+		if servers := parseNameservers(path); len(servers) > 0 {
+			return servers
+		}
+	}
+	return nmcliDNSFunc()
+}
+
+// nmcliDNS reads DHCP-assigned DNS servers from NetworkManager via nmcli.
+func nmcliDNS() []string {
+	return nmcliDNSFunc()
+}
+
+// parseNmcliLines parses the output of `nmcli -g IP4.DNS device show`.
+func parseNmcliLines(output string) []string {
 	var servers []string
 	seen := map[string]bool{}
-	for _, line := range strings.Split(string(out), "\n") {
+	for _, line := range strings.Split(output, "\n") {
 		// nmcli may separate multiple values with |
 		for _, ip := range strings.Split(line, "|") {
 			ip = strings.TrimSpace(ip)
