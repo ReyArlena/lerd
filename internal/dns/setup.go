@@ -19,19 +19,22 @@ const nmDnsmasqConf = `server=/test/127.0.0.1#5300
 
 const resolvedDropin = `[Resolve]
 DNS=127.0.0.1:5300
-Domains=~test
+Domains=~.
 `
 
 // nmDispatcherScript is installed at /etc/NetworkManager/dispatcher.d/99-lerd-dns.
 // On Ubuntu, NetworkManager manages systemd-resolved via DBUS and overrides global
 // resolved.conf drop-ins. Per-interface DNS set via resolvectl is respected.
+// We use ~. (catch-all routing domain) so ALL queries go through our dnsmasq, which
+// handles .test locally and forwards everything else to its configured upstream servers.
 const nmDispatcherScript = `#!/bin/sh
-# Lerd DNS: forward .test queries to local dnsmasq on port 5300
+# Lerd DNS: route all queries through local dnsmasq on port 5300
+# dnsmasq resolves .test locally and forwards everything else to real upstreams.
 IFACE="$1"
 ACTION="$2"
 if [ "$ACTION" = "up" ] || [ "$ACTION" = "dhcp4-change" ] || [ "$ACTION" = "dhcp6-change" ]; then
     resolvectl dns "$IFACE" 127.0.0.1:5300 2>/dev/null || true
-    resolvectl domain "$IFACE" ~test 2>/dev/null || true
+    resolvectl domain "$IFACE" ~. 2>/dev/null || true
 fi
 `
 
@@ -81,16 +84,43 @@ func defaultInterface() string {
 }
 
 // readUpstreamDNS returns upstream DNS server IPs from the running system.
-// On systemd-resolved systems it reads /run/systemd/resolve/resolv.conf (the real
-// upstream list, not the stub 127.0.0.53). Falls back to /etc/resolv.conf.
+// Sources tried in order:
+//  1. /run/systemd/resolve/resolv.conf — real upstreams on systemd-resolved systems
+//  2. nmcli — DHCP-provided DNS from NetworkManager
+//  3. /etc/resolv.conf — fallback
+//
+// Returns nil if nothing is found; callers should omit no-resolv in that case.
 func readUpstreamDNS() []string {
 	for _, path := range []string{"/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"} {
-		servers := parseNameservers(path)
-		if len(servers) > 0 {
+		if servers := parseNameservers(path); len(servers) > 0 {
 			return servers
 		}
 	}
-	return nil
+	return nmcliDNS()
+}
+
+// nmcliDNS reads DHCP-assigned DNS servers from NetworkManager via nmcli.
+func nmcliDNS() []string {
+	out, err := exec.Command("nmcli", "-g", "IP4.DNS", "device", "show").Output()
+	if err != nil {
+		return nil
+	}
+	var servers []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(string(out), "\n") {
+		// nmcli may separate multiple values with |
+		for _, ip := range strings.Split(line, "|") {
+			ip = strings.TrimSpace(ip)
+			if ip == "" || ip == "--" || ip == "127.0.0.1" || ip == "127.0.0.53" || ip == "::1" {
+				continue
+			}
+			if !seen[ip] {
+				seen[ip] = true
+				servers = append(servers, ip)
+			}
+		}
+	}
+	return servers
 }
 
 func parseNameservers(path string) []string {
@@ -188,7 +218,7 @@ func setupNMWithResolved() error {
 		return fmt.Errorf("applying DNS to %s: %w", iface, err)
 	}
 
-	domainCmd := exec.Command("sudo", "resolvectl", "domain", iface, "~test")
+	domainCmd := exec.Command("sudo", "resolvectl", "domain", iface, "~.")
 	domainCmd.Stdin = os.Stdin
 	domainCmd.Stdout = os.Stdout
 	domainCmd.Stderr = os.Stderr
@@ -307,20 +337,26 @@ func Teardown() {
 }
 
 // WriteDnsmasqConfig writes the lerd dnsmasq config to the given directory.
-// Upstream DNS servers are detected from the running system so they are never hardcoded.
+// Upstream DNS servers are detected from the running system (DHCP / systemd-resolved).
+// If no upstreams are detected, no-resolv is omitted so dnsmasq falls back to the
+// container's /etc/resolv.conf (populated by Podman from the host's DNS config).
 func WriteDnsmasqConfig(dir string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
+	upstreams := readUpstreamDNS()
+
 	var sb strings.Builder
 	sb.WriteString("# Lerd DNS configuration\n")
 	sb.WriteString("port=5300\n")
-	sb.WriteString("no-resolv\n")
-	sb.WriteString("address=/.test/127.0.0.1\n")
-	for _, ip := range readUpstreamDNS() {
-		fmt.Fprintf(&sb, "server=%s\n", ip)
+	if len(upstreams) > 0 {
+		sb.WriteString("no-resolv\n")
+		for _, ip := range upstreams {
+			fmt.Fprintf(&sb, "server=%s\n", ip)
+		}
 	}
+	sb.WriteString("address=/.test/127.0.0.1\n")
 
 	return os.WriteFile(filepath.Join(dir, "lerd.conf"), []byte(sb.String()), 0644)
 }
