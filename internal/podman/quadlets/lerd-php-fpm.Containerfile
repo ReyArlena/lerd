@@ -4,6 +4,7 @@ RUN apk add --no-cache \
         autoconf \
         make \
         g++ \
+        git \
         curl-dev \
         libzip-dev \
         libpng-dev \
@@ -31,8 +32,17 @@ RUN apk add --no-cache \
         pcntl \
         exif \
         sockets \
-    && (pecl install redis && docker-php-ext-enable redis || true) \
-    && (pecl install imagick && docker-php-ext-enable imagick || true) \
+    && { (pecl install redis && docker-php-ext-enable redis) \
+         || (git clone --depth 1 https://github.com/phpredis/phpredis /tmp/phpredis \
+             && cd /tmp/phpredis && phpize && ./configure && make -j$(nproc) && make install \
+             && docker-php-ext-enable redis \
+             && rm -rf /tmp/phpredis); } \
+    && { (pecl install imagick && docker-php-ext-enable imagick) \
+         || (git clone --depth 1 https://github.com/Imagick/imagick /tmp/imagick \
+             && cd /tmp/imagick && phpize && ./configure && make -j$(nproc) && make install \
+             && docker-php-ext-enable imagick \
+             && rm -rf /tmp/imagick) \
+         || true; } \
     && rm -rf /tmp/pear /var/cache/apk/*
 
 # Override pool: run workers as root, log errors to stderr

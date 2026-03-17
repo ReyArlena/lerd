@@ -7,6 +7,14 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.64] — 2026-03-17
+
+### Fixed
+
+- `redis` and `imagick` PHP extensions now fall back to building from GitHub source when the PECL stable release doesn't compile against the current PHP API version (e.g. PHP 8.5) — redis is required so the build fails if both methods fail; imagick remains optional
+
+---
+
 ## [0.1.63] — 2026-03-17
 
 ### Fixed
