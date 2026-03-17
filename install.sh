@@ -30,7 +30,7 @@ warn()    { echo -e "  ${YELLOW}!${RESET}  $*"; }
 error()   { echo -e "  ${RED}✗${RESET}  $*" >&2; }
 die()     { error "$*"; exit 1; }
 header()  { echo -e "\n${BOLD}$*${RESET}"; }
-ask()     { echo -en "  ${BOLD}?${RESET}  $* [y/N] "; read -r _ans </dev/tty; [[ "$_ans" =~ ^[Yy]$ ]]; }
+ask()     { echo -en "  ${BOLD}?${RESET}  $* [y/N] "; read -r _ans </dev/tty 2>/dev/null || true; [[ "$_ans" =~ ^[Yy]$ ]]; }
 
 # ── Platform detection ───────────────────────────────────────────────────────
 detect_arch() {
