@@ -146,7 +146,19 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	}
 	ok()
 
-	// 7. daemon-reload and start services
+	// 7. Pre-pull container images so first start doesn't hit systemd timeout
+	step("Pulling container images")
+	for _, image := range []string{"nginx:alpine", "alpine:latest"} {
+		cmd := exec.Command("podman", "pull", image)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Printf(" [WARN pulling %s: %v]\n", image, err)
+		}
+	}
+	ok()
+
+	// 8. daemon-reload and start services
 	step("Reloading systemd daemon")
 	if err := podman.DaemonReload(); err != nil {
 		return fmt.Errorf("daemon-reload: %w", err)

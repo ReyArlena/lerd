@@ -14,6 +14,7 @@ Volume=%h/.local/share/lerd/certs/sites:/etc/nginx/certs:ro
 
 [Service]
 Restart=always
+TimeoutStartSec=300
 
 [Install]
 WantedBy=default.target
