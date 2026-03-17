@@ -334,6 +334,27 @@ func (p *progressReader) Read(b []byte) (int, error) {
 func addShellShims() error {
 	home, _ := os.UserHomeDir()
 	binDir := config.BinDir()
+
+	// Write php shim
+	phpShim := "#!/bin/sh\nexec lerd php \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(binDir, "php"), []byte(phpShim), 0755); err != nil {
+		return fmt.Errorf("writing php shim: %w", err)
+	}
+
+	// Write composer shim
+	composerShim := "#!/bin/sh\nexec lerd php /home/$(whoami)/.local/share/lerd/bin/composer \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(binDir, "composer"), []byte(composerShim), 0755); err != nil {
+		return fmt.Errorf("writing composer shim: %w", err)
+	}
+
+	// Write node/npm/npx shims
+	for _, bin := range []string{"node", "npm", "npx"} {
+		shim := fmt.Sprintf("#!/bin/sh\nexec lerd %s \"$@\"\n", bin)
+		if err := os.WriteFile(filepath.Join(binDir, bin), []byte(shim), 0755); err != nil {
+			return fmt.Errorf("writing %s shim: %w", bin, err)
+		}
+	}
+
 	shell := os.Getenv("SHELL")
 
 	switch {
