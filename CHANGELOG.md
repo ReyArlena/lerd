@@ -7,6 +7,14 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.61] — 2026-03-17
+
+### Fixed
+
+- Domains are now always lowercased — directory names like `MyApp` or custom `--domain MyApp.test` now consistently produce `myapp.test`
+
+---
+
 ## [0.1.60] — 2026-03-17
 
 ### Fixed

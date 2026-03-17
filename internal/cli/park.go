@@ -160,10 +160,9 @@ func siteNameAndDomain(dirName, tld string) (string, string) {
 		".com", ".net", ".org", ".io", ".co", ".ltd", ".dev", ".app", ".me",
 		".info", ".biz", ".uk", ".us", ".eu", ".de", ".fr", ".ca", ".au",
 	}
-	name := dirName
-	lower := strings.ToLower(dirName)
+	name := strings.ToLower(dirName)
 	for _, ext := range knownTLDs {
-		if strings.HasSuffix(lower, ext) {
+		if strings.HasSuffix(name, ext) {
 			name = name[:len(name)-len(ext)]
 			break
 		}

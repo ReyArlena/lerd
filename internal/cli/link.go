@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/geodro/lerd/internal/config"
 	"github.com/geodro/lerd/internal/nginx"
@@ -46,7 +47,7 @@ func runLink(args []string, customDomain string) error {
 
 	name, domain := siteNameAndDomain(rawName, cfg.DNS.TLD)
 	if customDomain != "" {
-		domain = customDomain
+		domain = strings.ToLower(customDomain)
 	}
 
 	if isReservedDomain(domain) {
