@@ -205,9 +205,20 @@ fetch_stdout() {
 
 # ── GitHub release helpers ───────────────────────────────────────────────────
 latest_version() {
-  fetch_stdout "https://api.github.com/repos/${REPO}/releases/latest" \
-    | grep '"tag_name"' \
-    | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/'
+  local body
+  # Suppress curl/wget error output — we handle failures ourselves
+  case "$(_download_tool)" in
+    curl) body="$(curl -fsSL --stderr /dev/null "https://api.github.com/repos/${REPO}/releases/latest" || true)" ;;
+    wget) body="$(wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)" ;;
+  esac
+
+  # GitHub returns {"message":"Not Found"} when there are no releases yet
+  if echo "$body" | grep -q '"message"'; then
+    echo ""
+    return
+  fi
+
+  echo "$body" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/'
 }
 
 download_binary() {
@@ -217,9 +228,9 @@ download_binary() {
   local tmp; tmp="$(mktemp -d)"
 
   info "Downloading lerd v${version} (${arch}) via $(_download_tool) ..."
-  if ! fetch "$url" "${tmp}/${filename}"; then
+  if ! fetch "$url" "${tmp}/${filename}" 2>/dev/null; then
     rm -rf "$tmp"
-    die "Download failed: $url\nCheck https://github.com/${REPO}/releases for available versions."
+    die "Download failed (HTTP 404).\nNo release v${version} found at:\n  ${url}\n\nIf you built lerd locally, use:\n  bash install.sh --local ./build/lerd"
   fi
 
   tar -xzf "${tmp}/${filename}" -C "$tmp"
@@ -284,30 +295,40 @@ remove_from_path() {
 
 # ── Install ──────────────────────────────────────────────────────────────────
 cmd_install() {
+  local local_binary="${1:-}"
   header "Installing Lerd"
 
   check_prerequisites
 
-  local arch; arch="$(detect_arch)"
-  local version; version="$(latest_version)"
-  [ -n "$version" ] || die "Could not determine latest version. Check your internet connection."
-
-  local current; current="$(installed_version)"
-  if [ -n "$current" ] && [ "$current" = "$version" ]; then
-    success "Lerd v${version} is already installed and up to date"
-    exit 0
-  fi
-
-  local binary; binary="$(download_binary "$version" "$arch")"
-
   mkdir -p "$INSTALL_DIR"
-  install -m 755 "$binary" "${INSTALL_DIR}/${BINARY}"
-  success "Installed lerd v${version} → ${INSTALL_DIR}/${BINARY}"
+
+  if [ -n "$local_binary" ]; then
+    # ── Local binary path supplied (e.g. ./build/lerd) ──
+    [ -f "$local_binary" ] || die "File not found: $local_binary"
+    install -m 755 "$local_binary" "${INSTALL_DIR}/${BINARY}"
+    local version; version="$("${INSTALL_DIR}/${BINARY}" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "dev")"
+    success "Installed lerd ${version} (local) → ${INSTALL_DIR}/${BINARY}"
+  else
+    # ── Download from GitHub releases ──
+    local arch; arch="$(detect_arch)"
+    local version; version="$(latest_version)"
+    if [ -z "$version" ]; then
+      die "No releases found at https://github.com/${REPO}/releases\n\nIf you built lerd locally, install with:\n  bash install.sh --local ./build/lerd"
+    fi
+
+    local current; current="$(installed_version)"
+    if [ -n "$current" ] && [ "$current" = "$version" ]; then
+      success "Lerd v${version} is already installed and up to date"
+      exit 0
+    fi
+
+    local binary; binary="$(download_binary "$version" "$arch")"
+    install -m 755 "$binary" "${INSTALL_DIR}/${BINARY}"
+    success "Installed lerd v${version} → ${INSTALL_DIR}/${BINARY}"
+  fi
 
   add_to_path
 
-  echo ""
-  success "Lerd v${version} installed!"
   echo ""
   info "Running 'lerd install' to complete setup ..."
   echo ""
@@ -406,13 +427,18 @@ main() {
       MISSING_PKGS=()
       check_prerequisites
       ;;
+    --local)
+      [ -n "${2:-}" ] || die "--local requires a path argument, e.g: --local ./build/lerd"
+      cmd_install "$2"
+      ;;
     --help|-h)
-      echo "Usage: $0 [--update | --uninstall | --check]"
+      echo "Usage: $0 [--update | --uninstall | --check | --local <path>]"
       echo ""
-      echo "  (no args)    Install Lerd"
-      echo "  --update     Update to the latest release"
-      echo "  --uninstall  Remove Lerd and optionally its data"
-      echo "  --check      Check prerequisites only"
+      echo "  (no args)       Install Lerd from latest GitHub release"
+      echo "  --local <path>  Install from a locally built binary"
+      echo "  --update        Update to the latest release"
+      echo "  --uninstall     Remove Lerd and optionally its data"
+      echo "  --check         Check prerequisites only"
       ;;
     --install|install|"") cmd_install ;;
     *) die "Unknown option: $1. Run with --help for usage." ;;
