@@ -446,7 +446,13 @@ main() {
 }
 
 # Only run main when executed directly or piped to bash, not when sourced.
-# BASH_SOURCE is unset when piped (curl|bash), so default to $0.
-if [[ "${BASH_SOURCE[0]:-$0}" == "${0}" ]]; then
+# BASH_SOURCE may be an unset array when piped to bash (curl|bash / wget|bash),
+# which triggers set -u on some bash versions even with the :- operator.
+# Suspend nounset briefly to read it safely.
+set +u
+_lerd_src="${BASH_SOURCE[0]:-}"
+set -u
+if [[ -z "$_lerd_src" || "$_lerd_src" == "$0" ]]; then
   main "$@"
 fi
+unset _lerd_src
