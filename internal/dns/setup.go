@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/geodro/lerd/internal/config"
 )
@@ -21,6 +22,11 @@ dns=dnsmasq
 const nmDnsmasqConf = `server=/test/127.0.0.1#5300
 `
 
+const resolvedDropin = `[Resolve]
+DNS=127.0.0.1:5300
+Domains=~test
+`
+
 // isFileContent returns true if the file at path already contains exactly content.
 func isFileContent(path string, content []byte) bool {
 	existing, err := os.ReadFile(path)
@@ -30,17 +36,63 @@ func isFileContent(path string, content []byte) bool {
 	return string(existing) == string(content)
 }
 
-// Setup writes NetworkManager dnsmasq configuration and restarts NetworkManager.
-// Skips sudo steps if the files are already correctly configured.
+// isSystemdResolvedActive returns true if systemd-resolved is the active DNS resolver.
+func isSystemdResolvedActive() bool {
+	cmd := exec.Command("systemctl", "is-active", "--quiet", "systemd-resolved")
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+	// Also check that /etc/resolv.conf points to the stub resolver
+	data, err := os.ReadFile("/etc/resolv.conf")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(data), "127.0.0.53") || strings.Contains(string(data), "systemd-resolved")
+}
+
+// Setup writes DNS configuration for .test resolution and restarts the resolver.
+// On systemd-resolved systems (Ubuntu etc.) it uses a resolved drop-in.
+// On NetworkManager-only systems it uses NM's embedded dnsmasq.
 func Setup() error {
 	if err := WriteDnsmasqConfig(config.DnsmasqDir()); err != nil {
 		return fmt.Errorf("writing lerd dnsmasq config: %w", err)
 	}
 
+	if isSystemdResolvedActive() {
+		return setupSystemdResolved()
+	}
+	return setupNetworkManager()
+}
+
+// setupSystemdResolved configures systemd-resolved to forward .test to port 5300.
+func setupSystemdResolved() error {
+	dropin := "/etc/systemd/resolved.conf.d/lerd.conf"
+
+	if isFileContent(dropin, []byte(resolvedDropin)) {
+		return nil
+	}
+
+	fmt.Println("  [sudo required] Configuring systemd-resolved for .test DNS resolution")
+
+	if err := sudoWriteFile(dropin, []byte(resolvedDropin)); err != nil {
+		return fmt.Errorf("writing resolved drop-in: %w", err)
+	}
+
+	cmd := exec.Command("sudo", "systemctl", "restart", "systemd-resolved")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("restarting systemd-resolved: %w", err)
+	}
+	return nil
+}
+
+// setupNetworkManager configures NetworkManager's embedded dnsmasq.
+func setupNetworkManager() error {
 	nmConfFile := "/etc/NetworkManager/conf.d/lerd.conf"
 	nmDnsmasqFile := "/etc/NetworkManager/dnsmasq.d/lerd.conf"
 
-	// If both files are already correct, skip sudo entirely.
 	if isFileContent(nmConfFile, []byte(nmDnsConf)) && isFileContent(nmDnsmasqFile, []byte(nmDnsmasqConf)) {
 		return nil
 	}
@@ -55,7 +107,6 @@ func Setup() error {
 		return fmt.Errorf("writing NetworkManager dnsmasq conf: %w", err)
 	}
 
-	// Restart NetworkManager
 	cmd := exec.Command("sudo", "systemctl", "restart", "NetworkManager")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
