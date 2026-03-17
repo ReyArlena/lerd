@@ -433,9 +433,9 @@ func handleSiteAction(w http.ResponseWriter, r *http.Request) {
 	}
 	domain, action := parts[0], parts[1]
 
-	site, err := config.FindSite(domain)
+	site, err := config.FindSiteByDomain(domain)
 	if err != nil {
-		writeJSON(w, SiteActionResponse{Error: "site not found"})
+		writeJSON(w, SiteActionResponse{Error: "site not found: " + domain})
 		return
 	}
 

@@ -7,6 +7,15 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.37] — 2026-03-17
+
+### Fixed
+
+- HTTPS toggle in Sites tab no longer returns "site not found" — the API was looking up sites by name but receiving the full domain; added `FindSiteByDomain` and switched the handler to use it
+- HTTPS column now shows a proper toggle switch instead of "On / Off" text buttons
+
+---
+
 ## [0.1.36] — 2026-03-17
 
 ### Fixed

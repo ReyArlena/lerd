@@ -102,3 +102,19 @@ func FindSite(name string) (*Site, error) {
 	}
 	return nil, fmt.Errorf("site %q not found", name)
 }
+
+// FindSiteByDomain returns the site with the given domain, or an error if not found.
+func FindSiteByDomain(domain string) (*Site, error) {
+	reg, err := LoadSites()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range reg.Sites {
+		if s.Domain == domain {
+			s := s
+			return &s, nil
+		}
+	}
+	return nil, fmt.Errorf("site with domain %q not found", domain)
+}
