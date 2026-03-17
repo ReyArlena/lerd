@@ -205,14 +205,22 @@ fetch_stdout() {
 
 # ── GitHub release helpers ───────────────────────────────────────────────────
 latest_version() {
+  local url="https://api.github.com/repos/${REPO}/releases/latest"
   local body
-  # Suppress curl/wget error output — we handle failures ourselves
+  # GitHub requires a User-Agent header; without it the API returns 403.
   case "$(_download_tool)" in
-    curl) body="$(curl -fsSL --stderr /dev/null "https://api.github.com/repos/${REPO}/releases/latest" || true)" ;;
-    wget) body="$(wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)" ;;
+    curl) body="$(curl -fsSL --stderr /dev/null \
+            -H "User-Agent: lerd-installer" \
+            -H "Accept: application/vnd.github+json" \
+            "$url" || true)" ;;
+    wget) body="$(wget -qO- \
+            --header "User-Agent: lerd-installer" \
+            --header "Accept: application/vnd.github+json" \
+            "$url" 2>/dev/null || true)" ;;
   esac
 
-  # GitHub returns {"message":"Not Found"} when there are no releases yet
+  # GitHub returns {"message":"Not Found"} when there are no releases yet,
+  # or {"message":"API rate limit exceeded..."} on 403.
   if echo "$body" | grep -q '"message"'; then
     echo ""
     return
@@ -367,27 +375,32 @@ cmd_update() {
 cmd_uninstall() {
   header "Uninstalling Lerd"
 
-  # Stop and remove systemd units
-  for unit in lerd-nginx lerd-dns lerd-watcher lerd-php81-fpm lerd-php82-fpm lerd-php83-fpm lerd-php84-fpm lerd-mysql lerd-redis lerd-postgres lerd-meilisearch lerd-minio; do
-    if systemctl --user is-active --quiet "$unit" 2>/dev/null; then
-      info "Stopping $unit ..."
-      systemctl --user stop "$unit" 2>/dev/null || true
-    fi
-    if systemctl --user is-enabled --quiet "$unit" 2>/dev/null; then
-      systemctl --user disable "$unit" 2>/dev/null || true
-    fi
-  done
-
-  # Remove Quadlet files
+  # Stop and remove systemd units — discover from quadlet files on disk
   local quadlet_dir="${XDG_CONFIG_HOME:-$HOME/.config}/containers/systemd"
+  local systemd_user_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+
   if [ -d "$quadlet_dir" ]; then
+    for f in "$quadlet_dir"/lerd-*.container; do
+      [ -f "$f" ] || continue
+      local unit; unit="$(basename "$f" .container)"
+      if systemctl --user is-active --quiet "$unit" 2>/dev/null; then
+        info "Stopping $unit ..."
+        systemctl --user stop "$unit" 2>/dev/null || true
+      fi
+      systemctl --user disable "$unit" 2>/dev/null || true
+    done
     rm -f "$quadlet_dir"/lerd-*.container
     info "Removed Quadlet units from $quadlet_dir"
   fi
 
-  # Remove watcher service
-  local systemd_user_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-  rm -f "$systemd_user_dir/lerd-watcher.service"
+  # Stop and remove user service unit files
+  for svc in lerd-watcher lerd-ui; do
+    if systemctl --user is-active --quiet "$svc" 2>/dev/null; then
+      systemctl --user stop "$svc" 2>/dev/null || true
+    fi
+    systemctl --user disable "$svc" 2>/dev/null || true
+    rm -f "$systemd_user_dir/${svc}.service"
+  done
 
   systemctl --user daemon-reload 2>/dev/null || true
 

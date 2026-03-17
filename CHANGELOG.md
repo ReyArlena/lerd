@@ -7,6 +7,15 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.33] — 2026-03-17
+
+### Fixed
+
+- `install.sh` `latest_version()` now sends `User-Agent: lerd-installer` and `Accept: application/vnd.github+json` headers — GitHub's API returns 403 for unauthenticated requests without a User-Agent, which the script was silently treating as "no releases found"
+- `install.sh` `cmd_uninstall` now dynamically discovers units from quadlet files on disk (same fix as `lerd uninstall`)
+
+---
+
 ## [0.1.32] — 2026-03-17
 
 ### Fixed
