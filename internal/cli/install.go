@@ -14,7 +14,6 @@ import (
 	"github.com/geodro/lerd/internal/config"
 	"github.com/geodro/lerd/internal/dns"
 	"github.com/geodro/lerd/internal/nginx"
-	phpPkg "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	lerdSystemd "github.com/geodro/lerd/internal/systemd"
 	"github.com/spf13/cobra"
@@ -96,6 +95,21 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	}
 	ok()
 
+	step("Regenerating vhosts")
+	if reg, err := config.LoadSites(); err == nil {
+		cfg, _ := config.LoadGlobal()
+		for _, site := range reg.Sites {
+			phpVer := site.PHPVersion
+			if phpVer == "" && cfg != nil {
+				phpVer = cfg.PHP.DefaultVersion
+			}
+			if err := nginx.GenerateVhost(site, phpVer); err != nil {
+				fmt.Printf(" [WARN %s: %v]", site.Domain, err)
+			}
+		}
+	}
+	ok()
+
 	step("Writing nginx quadlet")
 	nginxQuadlet, err := podman.GetQuadletTemplate("lerd-nginx.container")
 	if err != nil {
@@ -153,17 +167,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		ok()
 	}
 
-	// 9. Regenerate PHP-FPM quadlets for all installed versions
-	step("Updating PHP-FPM quadlets")
-	phpVersions, _ := phpPkg.ListInstalled()
-	for _, v := range phpVersions {
-		if err := ensureFPMQuadlet(v); err != nil {
-			fmt.Printf(" [WARN PHP %s: %v]", v, err)
-		}
-	}
-	ok()
-
-	// 10. Shell shims
+	// 9. Shell shims
 	step("Adding shell PATH configuration")
 	if err := addShellShims(); err != nil {
 		fmt.Printf(" [WARN: %v]\n", err)

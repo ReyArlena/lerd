@@ -12,6 +12,10 @@ import (
 	"github.com/geodro/lerd/internal/podman"
 )
 
+type nginxConfData struct {
+	Resolver string
+}
+
 // VhostData is the data passed to vhost templates.
 type VhostData struct {
 	Domain         string
@@ -116,9 +120,19 @@ func EnsureNginxConfig() error {
 	}
 
 	destPath := filepath.Join(nginxDir, "nginx.conf")
-	data, err := GetTemplate("nginx.conf")
+	tmplData, err := GetTemplate("nginx.conf")
 	if err != nil {
 		return fmt.Errorf("failed to read embedded nginx.conf: %w", err)
 	}
-	return os.WriteFile(destPath, data, 0644)
+	tmpl, err := template.New("nginx.conf").Parse(string(tmplData))
+	if err != nil {
+		return fmt.Errorf("parsing nginx.conf template: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, nginxConfData{
+		Resolver: podman.NetworkGateway("lerd"),
+	}); err != nil {
+		return fmt.Errorf("rendering nginx.conf: %w", err)
+	}
+	return os.WriteFile(destPath, buf.Bytes(), 0644)
 }

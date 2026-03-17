@@ -156,10 +156,14 @@ func siteNameAndDomain(dirName, tld string) (string, string) {
 	return name, name + "." + tld
 }
 
-// ensureFPMQuadlet writes (or overwrites) a PHP-FPM quadlet for the given version.
+// ensureFPMQuadlet builds the PHP image if needed, then writes (or overwrites) the quadlet.
 func ensureFPMQuadlet(phpVersion string) error {
 	versionShort := strings.ReplaceAll(phpVersion, ".", "")
 	unitName := "lerd-php" + versionShort + "-fpm"
+
+	if err := podman.BuildFPMImage(phpVersion); err != nil {
+		return fmt.Errorf("building FPM image for PHP %s: %w", phpVersion, err)
+	}
 
 	tmplContent, err := podman.GetQuadletTemplate("lerd-php-fpm.container.tmpl")
 	if err != nil {
