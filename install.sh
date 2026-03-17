@@ -445,7 +445,8 @@ main() {
   esac
 }
 
-# Only run main when executed directly, not when sourced (e.g. for testing).
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+# Only run main when executed directly or piped to bash, not when sourced.
+# BASH_SOURCE is unset when piped (curl|bash), so default to $0.
+if [[ "${BASH_SOURCE[0]:-$0}" == "${0}" ]]; then
   main "$@"
 fi
