@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/geodro/lerd/internal/certs"
 	"github.com/geodro/lerd/internal/config"
@@ -29,6 +30,11 @@ func NewInstallCmd() *cobra.Command {
 
 func runInstall(_ *cobra.Command, _ []string) error {
 	fmt.Println("==> Installing Lerd")
+
+	// 0. Check unprivileged port binding (needed for nginx on 80/443)
+	if err := ensureUnprivilegedPorts(); err != nil {
+		return err
+	}
 
 	// 1. Create XDG directories
 	step("Creating directories")
@@ -155,6 +161,39 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	}
 
 	fmt.Println("\nLerd installation complete!")
+	return nil
+}
+
+// ensureUnprivilegedPorts checks net.ipv4.ip_unprivileged_port_start and
+// offers to set it to 80 so rootless Podman can bind to ports 80 and 443.
+func ensureUnprivilegedPorts() error {
+	const sysctlPath = "/proc/sys/net/ipv4/ip_unprivileged_port_start"
+	data, err := os.ReadFile(sysctlPath)
+	if err != nil {
+		// Not available on this kernel — skip
+		return nil
+	}
+	val := 1024
+	fmt.Sscanf(strings.TrimSpace(string(data)), "%d", &val)
+	if val <= 80 {
+		return nil // already fine
+	}
+
+	fmt.Printf("\n  ! Port 80/443 require net.ipv4.ip_unprivileged_port_start ≤ 80 (current: %d)\n", val)
+	fmt.Println("    This is needed for rootless Podman to run Nginx on standard HTTP/HTTPS ports.")
+
+	step("Setting net.ipv4.ip_unprivileged_port_start=80")
+	cmds := [][]string{
+		{"sudo", "sysctl", "-w", "net.ipv4.ip_unprivileged_port_start=80"},
+		{"sudo", "sh", "-c", "echo 'net.ipv4.ip_unprivileged_port_start=80' > /etc/sysctl.d/99-lerd-ports.conf"},
+	}
+	for _, args := range cmds {
+		cmd := exec.Command(args[0], args[1:]...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("setting unprivileged port start: %w\n%s", err, out)
+		}
+	}
+	ok()
 	return nil
 }
 

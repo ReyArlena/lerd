@@ -7,6 +7,19 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.7] — 2026-03-17
+
+### Fixed
+
+- `lerd-dns.container` — removed `Network=host` and `AddCapability=NET_ADMIN` which both fail under rootless Podman; container now runs dnsmasq on port 5300 via a published port (`127.0.0.1:5300:5300`)
+- `lerd install` — now checks `net.ipv4.ip_unprivileged_port_start` and automatically sets it to 80 (with sudo) so rootless Podman can bind nginx to ports 80 and 443; also writes `/etc/sysctl.d/99-lerd-ports.conf` to persist across reboots
+
+### Changed
+
+- `lerd status` — every FAIL entry now shows an actionable hint (e.g. `systemctl --user start lerd-nginx`, `lerd service start mysql`, `lerd use 8.4`)
+
+---
+
 ## [0.1.6] — 2026-03-17
 
 ### Fixed
@@ -123,6 +136,7 @@ Initial release.
 
 ---
 
+[0.1.7]: https://github.com/geodro/lerd/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/geodro/lerd/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/geodro/lerd/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/geodro/lerd/compare/v0.1.3...v0.1.4

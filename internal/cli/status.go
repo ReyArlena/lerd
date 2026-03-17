@@ -22,9 +22,9 @@ const (
 	colorReset  = "\033[0m"
 )
 
-func ok2(label string)       { fmt.Printf("  %s%-30s%s OK\n", colorGreen, label, colorReset) }
-func fail2(label, msg string) { fmt.Printf("  %s%-30s%s FAIL (%s)\n", colorRed, label, colorReset, msg) }
-func warn2(label, msg string) { fmt.Printf("  %s%-30s%s WARN (%s)\n", colorYellow, label, colorReset, msg) }
+func ok2(label string)              { fmt.Printf("  %s%-30s%s OK\n", colorGreen, label, colorReset) }
+func fail2(label, msg, hint string) { fmt.Printf("  %s%-30s%s FAIL (%s)\n    hint: %s\n", colorRed, label, colorReset, msg, hint) }
+func warn2(label, msg string)       { fmt.Printf("  %s%-30s%s WARN (%s)\n", colorYellow, label, colorReset, msg) }
 
 // NewStatusCmd returns the status command.
 func NewStatusCmd() *cobra.Command {
@@ -50,7 +50,9 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	if ok {
 		ok2(fmt.Sprintf(".%s resolution", cfg.DNS.TLD))
 	} else {
-		fail2(fmt.Sprintf(".%s resolution", cfg.DNS.TLD), "run 'lerd dns:check' for details")
+		fail2(fmt.Sprintf(".%s resolution", cfg.DNS.TLD),
+			"not resolving",
+			"run 'lerd install' to reconfigure, or: sudo systemctl restart NetworkManager")
 	}
 
 	// Nginx
@@ -59,14 +61,16 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	if running {
 		ok2("lerd-nginx container")
 	} else {
-		fail2("lerd-nginx container", "not running")
+		fail2("lerd-nginx container",
+			"not running",
+			"systemctl --user start lerd-nginx  |  check: systemctl --user status lerd-nginx")
 	}
 
 	// PHP FPM
 	fmt.Println("\n[PHP FPM]")
 	versions, _ := phpPkg.ListInstalled()
 	if len(versions) == 0 {
-		warn2("PHP versions", "none installed")
+		warn2("PHP versions", "none installed — run: lerd use 8.4")
 	}
 	for _, v := range versions {
 		short := ""
@@ -80,7 +84,9 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		if running {
 			ok2("PHP " + v + " FPM")
 		} else {
-			fail2("PHP "+v+" FPM", containerName+" not running")
+			fail2("PHP "+v+" FPM",
+				containerName+" not running",
+				"systemctl --user start "+containerName)
 		}
 	}
 
@@ -93,9 +99,9 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		case "active":
 			ok2(svc)
 		case "inactive":
-			warn2(svc, "inactive")
+			warn2(svc, "inactive — start with: lerd service start "+svc)
 		default:
-			fail2(svc, status)
+			fail2(svc, status, "systemctl --user status "+unit)
 		}
 	}
 
@@ -111,7 +117,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 			hasSecured = true
 			certPath := filepath.Join(config.CertsDir(), "sites", s.Domain+".crt")
 			if exp, err := certExpiry(certPath); err != nil {
-				fail2(s.Domain, "cannot read cert")
+				fail2(s.Domain, "cannot read cert", "run: lerd secure "+s.Domain)
 			} else {
 				remaining := time.Until(exp)
 				days := int(remaining.Hours() / 24)
