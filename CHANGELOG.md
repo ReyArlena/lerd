@@ -7,6 +7,14 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.36] — 2026-03-17
+
+### Fixed
+
+- `lerd status` no longer warns about all 7 services being inactive — it now only shows services that have a quadlet file on disk (i.e. were intentionally installed); uninstalled services are silently skipped with a single "No services installed" message if none are present
+
+---
+
 ## [0.1.35] — 2026-03-17
 
 ### Added

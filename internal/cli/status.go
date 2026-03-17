@@ -90,10 +90,15 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Services
+	// Services — only show services that have a quadlet file installed
 	fmt.Println("\n[Services]")
+	installedCount := 0
 	for _, svc := range knownServices {
 		unit := "lerd-" + svc
+		if !podman.QuadletInstalled(unit) {
+			continue
+		}
+		installedCount++
 		status, _ := podman.UnitStatus(unit)
 		switch status {
 		case "active":
@@ -103,6 +108,9 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		default:
 			fail2(svc, status, "systemctl --user status "+unit)
 		}
+	}
+	if installedCount == 0 {
+		fmt.Println("  No services installed. Start one with: lerd service start <name>")
 	}
 
 	// Certificate expiry for secured sites
