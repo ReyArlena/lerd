@@ -116,11 +116,6 @@ func EnsureNginxConfig() error {
 	}
 
 	destPath := filepath.Join(nginxDir, "nginx.conf")
-	if _, err := os.Stat(destPath); err == nil {
-		// already exists
-		return nil
-	}
-
 	data, err := GetTemplate("nginx.conf")
 	if err != nil {
 		return fmt.Errorf("failed to read embedded nginx.conf: %w", err)

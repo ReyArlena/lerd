@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+
 // NewParkCmd returns the park command.
 func NewParkCmd() *cobra.Command {
 	return &cobra.Command{
@@ -155,17 +156,10 @@ func siteNameAndDomain(dirName, tld string) (string, string) {
 	return name, name + "." + tld
 }
 
-// ensureFPMQuadlet writes a PHP-FPM quadlet for the given version if it doesn't exist.
+// ensureFPMQuadlet writes (or overwrites) a PHP-FPM quadlet for the given version.
 func ensureFPMQuadlet(phpVersion string) error {
 	versionShort := strings.ReplaceAll(phpVersion, ".", "")
 	unitName := "lerd-php" + versionShort + "-fpm"
-
-	// Check if quadlet already exists
-	quadletDir := config.QuadletDir()
-	quadletPath := filepath.Join(quadletDir, unitName+".container")
-	if _, err := os.Stat(quadletPath); err == nil {
-		return nil // already exists
-	}
 
 	tmplContent, err := podman.GetQuadletTemplate("lerd-php-fpm.container.tmpl")
 	if err != nil {
@@ -175,7 +169,6 @@ func ensureFPMQuadlet(phpVersion string) error {
 	// Simple string replacement for the template
 	content := strings.ReplaceAll(tmplContent, "{{.Version}}", phpVersion)
 	content = strings.ReplaceAll(content, "{{.VersionShort}}", versionShort)
-	content = strings.ReplaceAll(content, "{{.ProjectsDir}}", filepath.Dir(config.DataDir()))
 
 	if err := podman.WriteQuadlet(unitName, content); err != nil {
 		return err

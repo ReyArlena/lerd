@@ -6,7 +6,8 @@ After=network.target
 Image=php:{{.Version}}-fpm-alpine
 ContainerName=lerd-php{{.VersionShort}}-fpm
 Network=lerd
-Volume={{.ProjectsDir}}:{{.ProjectsDir}}:ro
+Volume=%h:%h:rw
+Exec=/bin/sh -c "printf '[www]\nuser=root\ngroup=root\n' > /usr/local/etc/php-fpm.d/zz-lerd.conf && php-fpm -F -R"
 
 [Service]
 Restart=always

@@ -14,6 +14,7 @@ import (
 	"github.com/geodro/lerd/internal/config"
 	"github.com/geodro/lerd/internal/dns"
 	"github.com/geodro/lerd/internal/nginx"
+	phpPkg "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	lerdSystemd "github.com/geodro/lerd/internal/systemd"
 	"github.com/spf13/cobra"
@@ -152,7 +153,17 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		ok()
 	}
 
-	// 9. Shell shims
+	// 9. Regenerate PHP-FPM quadlets for all installed versions
+	step("Updating PHP-FPM quadlets")
+	phpVersions, _ := phpPkg.ListInstalled()
+	for _, v := range phpVersions {
+		if err := ensureFPMQuadlet(v); err != nil {
+			fmt.Printf(" [WARN PHP %s: %v]", v, err)
+		}
+	}
+	ok()
+
+	// 10. Shell shims
 	step("Adding shell PATH configuration")
 	if err := addShellShims(); err != nil {
 		fmt.Printf(" [WARN: %v]\n", err)
