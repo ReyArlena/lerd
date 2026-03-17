@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -106,6 +108,7 @@ func Start(currentVersion string) error {
 	mux.HandleFunc("/api/update", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		handleUpdate(w, r, currentVersion)
 	}))
+	mux.HandleFunc("/api/logs/", withCORS(handleLogs))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(indexHTML) //nolint:errcheck
@@ -306,7 +309,14 @@ func handleServiceAction(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, resp)
 			return
 		}
-		opErr = podman.StartUnit(unit)
+		// Retry to handle Quadlet generator latency after daemon-reload.
+		for attempt := range 5 {
+			opErr = podman.StartUnit(unit)
+			if opErr == nil || !strings.Contains(opErr.Error(), "not found") {
+				break
+			}
+			time.Sleep(time.Duration(attempt+1) * 300 * time.Millisecond)
+		}
 	case "stop":
 		opErr = podman.StopUnit(unit)
 	default:
@@ -404,6 +414,59 @@ func fetchLatestRelease() string {
 type UpdateResponse struct {
 	OK     bool   `json:"ok"`
 	Output string `json:"output"`
+}
+
+// allowedContainer validates that a container name is a known lerd container.
+var allowedContainer = regexp.MustCompile(`^lerd-[a-z0-9-]+$`)
+
+func handleLogs(w http.ResponseWriter, r *http.Request) {
+	container := strings.TrimPrefix(r.URL.Path, "/api/logs/")
+	if !allowedContainer.MatchString(container) {
+		http.Error(w, "unknown container", http.StatusNotFound)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no") // tell nginx not to buffer
+
+	pr, pw := io.Pipe()
+	cmd := exec.CommandContext(r.Context(), "podman", "logs", "-f", "--tail", "100", container)
+	cmd.Stdout = pw
+	cmd.Stderr = pw
+
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(w, "data: error starting logs: %s\n\n", err.Error())
+		flusher.Flush()
+		return
+	}
+
+	go func() {
+		cmd.Wait() //nolint:errcheck
+		pw.Close()
+	}()
+
+	scanner := bufio.NewScanner(pr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Escape backslashes and encode as a single SSE data line.
+		escaped := strings.ReplaceAll(line, "\\", "\\\\")
+		fmt.Fprintf(w, "data: %s\n\n", escaped)
+		flusher.Flush()
+		if r.Context().Err() != nil {
+			break
+		}
+	}
+	if cmd.Process != nil {
+		cmd.Process.Kill() //nolint:errcheck
+	}
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request, _ string) {

@@ -136,7 +136,12 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   <template x-for="site in sites" :key="site.domain">
-                    <tr class="hover:bg-gray-50">
+                    <tr
+                      class="hover:bg-blue-50 cursor-pointer transition-colors"
+                      :class="logs.container === fpmContainer(site) && logs.open ? 'bg-blue-50' : ''"
+                      @click="openLogs(site)"
+                      title="Click to view live PHP-FPM logs"
+                    >
                       <td class="px-4 py-3">
                         <a
                           :href="'http://' + site.domain"
@@ -144,6 +149,7 @@
                           rel="noopener"
                           class="text-blue-600 hover:underline font-medium"
                           x-text="site.domain"
+                          @click.stop
                         ></a>
                       </td>
                       <td class="px-4 py-3 text-gray-600 font-mono text-xs truncate max-w-xs" x-text="site.path"></td>
@@ -228,19 +234,30 @@
                     </template>
 
                     <button
-                      @click="copyEnvVars(svc)"
+                      @click="svc.showEnv = !svc.showEnv"
                       class="text-xs font-medium bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded px-3 py-1.5 transition-colors"
-                      :title="'Copy .env vars for ' + svc.name"
-                    >
-                      Copy .env
-                    </button>
+                      :title="'Toggle .env vars for ' + svc.name"
+                      x-text="svc.showEnv ? 'Hide .env' : 'Show .env'"
+                    ></button>
+                  </div>
+
+                  <!-- Env vars preview -->
+                  <div x-show="svc.showEnv" class="rounded border border-gray-200 overflow-hidden">
+                    <div class="flex items-center justify-between bg-gray-100 px-3 py-1.5 border-b border-gray-200">
+                      <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">.env</span>
+                      <button
+                        @click="copyEnvVars(svc)"
+                        class="text-[10px] font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        <span x-show="!svc.copied">Copy</span>
+                        <span x-show="svc.copied" class="text-green-600">Copied!</span>
+                      </button>
+                    </div>
+                    <pre class="bg-gray-900 text-gray-100 px-3 py-2 text-[10px] leading-relaxed overflow-x-auto whitespace-pre" x-text="envPreview(svc)"></pre>
                   </div>
 
                   <!-- Success feedback -->
                   <div x-show="svc.flash" class="text-xs text-center text-green-700 bg-green-50 rounded px-2 py-1" x-text="svc.flash"></div>
-
-                  <!-- Copy feedback -->
-                  <div x-show="svc.copied" class="text-xs text-center text-green-600 bg-green-50 rounded px-2 py-1">Copied to clipboard!</div>
 
                   <!-- Error feedback -->
                   <template x-if="svc.error">
@@ -348,6 +365,65 @@
     </main>
   </div>
 
+<!-- Live logs drawer (fixed bottom) -->
+<div
+  x-show="logs.open"
+  x-transition:enter="transition ease-out duration-200"
+  x-transition:enter-start="translate-y-full opacity-0"
+  x-transition:enter-end="translate-y-0 opacity-100"
+  x-transition:leave="transition ease-in duration-150"
+  x-transition:leave-start="translate-y-0 opacity-100"
+  x-transition:leave-end="translate-y-full opacity-0"
+  class="fixed bottom-0 left-56 right-0 h-72 bg-gray-950 border-t border-gray-700 flex flex-col z-50"
+  style="display:none"
+>
+  <!-- Drawer header -->
+  <div class="flex items-center justify-between px-4 py-2 border-b border-gray-700 shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-semibold text-gray-300" x-text="logs.container"></span>
+      <span class="flex items-center gap-1.5 text-[10px]" :class="logs.connected ? 'text-green-400' : 'text-gray-500'">
+        <span class="w-1.5 h-1.5 rounded-full" :class="logs.connected ? 'bg-green-400 animate-pulse' : 'bg-gray-500'"></span>
+        <span x-text="logs.connected ? 'live' : 'disconnected'"></span>
+      </span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button
+        @click="clearLogs()"
+        class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+      >Clear</button>
+      <button
+        @click="closeLogs()"
+        class="text-gray-500 hover:text-gray-300 transition-colors"
+        title="Close"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <!-- Log lines -->
+  <div
+    class="flex-1 overflow-y-auto px-4 py-2 font-mono text-[11px] leading-relaxed text-gray-300 space-y-0.5"
+    x-ref="logScroll"
+  >
+    <template x-if="logs.lines.length === 0">
+      <div class="text-gray-600 italic">Waiting for log output...</div>
+    </template>
+    <template x-for="(line, i) in logs.lines" :key="i">
+      <div
+        class="whitespace-pre-wrap break-all"
+        :class="{
+          'text-red-400': line.includes('ERROR') || line.includes('Error') || line.includes('error') || line.includes('PHP Fatal') || line.includes('PHP Warning'),
+          'text-yellow-400': line.includes('WARNING') || line.includes('Warning') || line.includes('PHP Notice'),
+          'text-gray-500': line.startsWith('#') || line.startsWith(';')
+        }"
+        x-text="line"
+      ></div>
+    </template>
+  </div>
+</div>
+
 <script>
 function lerdApp() {
   return {
@@ -368,6 +444,13 @@ function lerdApp() {
       updateDone: false,
     },
     _statusInterval: null,
+    logs: {
+      open: false,
+      container: '',
+      lines: [],
+      connected: false,
+      _source: null,
+    },
 
     init() {
       this.loadVersion();
@@ -443,7 +526,7 @@ function lerdApp() {
       try {
         const res = await fetch('/api/services');
         const data = await res.json();
-        this.services = data.map(s => ({ ...s, loading: false, copied: false, flash: '', error: '', logs: '' }));
+        this.services = data.map(s => ({ ...s, loading: false, copied: false, flash: '', error: '', logs: '', showEnv: false }));
       } catch (_) {
         this.services = [];
       } finally {
@@ -475,15 +558,68 @@ function lerdApp() {
       }
     },
 
-    async copyEnvVars(svc) {
-      const lines = Object.entries(svc.env_vars || {})
+    envPreview(svc) {
+      return Object.entries(svc.env_vars || {})
         .map(([k, v]) => `${k}=${v}`)
         .join('\n');
+    },
+
+    async copyEnvVars(svc) {
       try {
-        await navigator.clipboard.writeText(lines);
+        await navigator.clipboard.writeText(this.envPreview(svc));
         svc.copied = true;
         setTimeout(() => { svc.copied = false; }, 2000);
       } catch (_) {}
+    },
+
+    fpmContainer(site) {
+      if (!site.php_version) return '';
+      return 'lerd-php' + site.php_version.replace('.', '') + '-fpm';
+    },
+
+    openLogs(site) {
+      const container = this.fpmContainer(site);
+      if (!container) return;
+      // If already showing this container, just close
+      if (this.logs.open && this.logs.container === container) {
+        this.closeLogs();
+        return;
+      }
+      this.closeLogs();
+      this.logs.container = container;
+      this.logs.lines = [];
+      this.logs.open = true;
+      this.logs.connected = false;
+
+      const src = new EventSource(`/api/logs/${container}`);
+      this.logs._source = src;
+
+      src.onopen = () => { this.logs.connected = true; };
+      src.onerror = () => { this.logs.connected = false; };
+      src.onmessage = (e) => {
+        this.logs.lines.push(e.data);
+        // keep last 500 lines
+        if (this.logs.lines.length > 500) {
+          this.logs.lines.splice(0, this.logs.lines.length - 500);
+        }
+        this.$nextTick(() => {
+          const el = this.$refs.logScroll;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      };
+    },
+
+    closeLogs() {
+      if (this.logs._source) {
+        this.logs._source.close();
+        this.logs._source = null;
+      }
+      this.logs.open = false;
+      this.logs.connected = false;
+    },
+
+    clearLogs() {
+      this.logs.lines = [];
     },
 
     async loadStatus() {
