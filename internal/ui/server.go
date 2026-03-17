@@ -114,6 +114,7 @@ func Start(currentVersion string) error {
 	}))
 	mux.HandleFunc("/api/php-versions", withCORS(handlePHPVersions))
 	mux.HandleFunc("/api/node-versions", withCORS(handleNodeVersions))
+	mux.HandleFunc("/api/node-versions/install", withCORS(handleInstallNodeVersion))
 	mux.HandleFunc("/api/sites/", withCORS(handleSiteAction))
 	mux.HandleFunc("/api/logs/", withCORS(handleLogs))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -559,6 +560,28 @@ func handleSiteAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, SiteActionResponse{OK: true})
+}
+
+var validVersion = regexp.MustCompile(`^[0-9]+(\.[0-9]+)*$`)
+
+func handleInstallNodeVersion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	version := r.URL.Query().Get("version")
+	if version == "" || !validVersion.MatchString(version) {
+		writeJSON(w, map[string]any{"ok": false, "error": "invalid version"})
+		return
+	}
+	fnmPath := config.BinDir() + "/fnm"
+	cmd := exec.Command(fnmPath, "install", version)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": strings.TrimSpace(string(out))})
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
 }
 
 // allowedContainer validates that a container name is a known lerd container.
