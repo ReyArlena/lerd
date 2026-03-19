@@ -7,6 +7,14 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.3] — 2026-03-19
+
+### Fixed
+
+- **Tray not restarting after `lerd update`**: `lerd install` was killing the tray with `pkill` but only relaunching it when `lerd-tray.service` was enabled. If the tray was started directly (`lerd tray`), it was killed and never restarted. Now tracks whether the tray was running before the kill and relaunches it directly when systemd is not managing it.
+
+---
+
 ## [0.5.2] — 2026-03-19
 
 ### Fixed
@@ -770,6 +778,7 @@ Initial release.
 
 ---
 
+[0.5.3]: https://github.com/geodro/lerd/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/geodro/lerd/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/geodro/lerd/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/geodro/lerd/compare/v0.4.3...v0.5.0
