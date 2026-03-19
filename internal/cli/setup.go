@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,7 +26,7 @@ func NewSetupCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "setup",
-		Short: "Bootstrap a Laravel project (composer, npm, env, migrate, build, open)",
+		Short: "Bootstrap a Laravel project (composer, npm, env, migrate, assets, open)",
 		Long: `Runs a series of standard project setup steps with an interactive
 step-selector so you can toggle which steps to execute before they run.
 
@@ -36,7 +37,7 @@ Steps (smart defaults based on project state):
   4. lerd mcp:inject         — inject MCP config (off by default)
   5. php artisan migrate     — run database migrations
   6. php artisan db:seed     — seed the database (off by default)
-  7. npm run build           — build front-end assets (if package.json exists)
+  7. npm run <build|production|prod> — build front-end assets (detected from package.json scripts)
   8. lerd secure             — enable HTTPS via mkcert (off by default)
   9. lerd open               — open site in browser
 
@@ -70,6 +71,7 @@ func runSetup(allSteps, skipOpen bool) error {
 	_, nodeModulesMissing := os.Stat(cwd + "/node_modules")
 	_, pkgJSONErr := os.Stat(cwd + "/package.json")
 	hasPackageJSON := pkgJSONErr == nil
+	buildScript := detectBuildScript(cwd + "/package.json")
 
 	steps := []setupStep{
 		{
@@ -118,10 +120,10 @@ func runSetup(allSteps, skipOpen bool) error {
 			},
 		},
 		{
-			label:   "npm run build",
-			enabled: hasPackageJSON,
+			label:   "npm run " + buildScript,
+			enabled: hasPackageJSON && buildScript != "",
 			run: func() error {
-				return runWithFnm("npm", []string{"run", "build"})
+				return runWithFnm("npm", []string{"run", buildScript})
 			},
 		},
 	}
@@ -197,6 +199,27 @@ func runSetup(allSteps, skipOpen bool) error {
 
 	fmt.Println("\nSetup complete.")
 	return nil
+}
+
+// detectBuildScript reads package.json and returns the best build script name.
+// Priority: build (vite/default) → production (laravel-mix) → prod → "".
+func detectBuildScript(pkgJSONPath string) string {
+	data, err := os.ReadFile(pkgJSONPath)
+	if err != nil {
+		return "build"
+	}
+	var pkg struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return "build"
+	}
+	for _, candidate := range []string{"build", "production", "prod"} {
+		if _, ok := pkg.Scripts[candidate]; ok {
+			return candidate
+		}
+	}
+	return ""
 }
 
 // promptContinue asks the user whether to continue after a step failure.
