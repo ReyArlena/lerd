@@ -1,3 +1,6 @@
 build/
 dist/
 *.tmp
+.venv/
+site/
+docs/assets/screenshots/

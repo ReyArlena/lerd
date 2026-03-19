@@ -1,0 +1,113 @@
+site_name: Lerd
+site_description: Laravel Herd for Linux — Podman-native local development
+site_url: https://geodro.github.io/lerd/
+repo_url: https://github.com/geodro/lerd
+repo_name: geodro/lerd
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Requirements: getting-started/requirements.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+  - Usage:
+      - Site Management: usage/sites.md
+      - PHP: usage/php.md
+      - Node: usage/node.md
+      - Services: usage/services.md
+      - Database: usage/database.md
+      - Queue Workers: usage/queue-workers.md
+  - Features:
+      - Web UI: features/web-ui.md
+      - System Tray: features/system-tray.md
+      - HTTPS / TLS: features/https.md
+      - Project Setup: features/project-setup.md
+      - Environment Setup: features/env-setup.md
+      - AI Integration (MCP): features/mcp.md
+  - Reference:
+      - Command Reference: reference/commands.md
+      - Configuration: reference/configuration.md
+      - Directory Layout: reference/directory-layout.md
+      - Architecture: reference/architecture.md
+  - Contributing:
+      - Building from Source: contributing/building.md
+  - Troubleshooting: troubleshooting.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/geodro/lerd
+
+copyright: "Lerd — MIT License"

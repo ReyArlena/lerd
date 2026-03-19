@@ -1,0 +1,102 @@
+# Command Reference
+
+## Setup & lifecycle
+
+| Command | Description |
+|---|---|
+| `lerd install` | One-time setup: directories, network, binaries, DNS, nginx, watcher |
+| `lerd start` | Start DNS, nginx, PHP-FPM containers, and all installed services |
+| `lerd stop` | Stop DNS, nginx, PHP-FPM containers, and all running services |
+| `lerd update` | Update to the latest release |
+| `lerd uninstall` | Stop all containers and remove Lerd |
+| `lerd uninstall --force` | Same, skipping all confirmation prompts |
+| `lerd autostart enable` | Start Lerd automatically on every login |
+| `lerd autostart disable` | Disable autostart on login |
+| `lerd tray` | Launch the system tray applet (detaches from terminal) |
+| `lerd autostart tray enable` | Start the tray applet automatically on graphical login |
+| `lerd autostart tray disable` | Disable tray autostart |
+| `lerd dns:check` | Verify that `*.test` resolves to `127.0.0.1` |
+| `lerd status` | Health summary: DNS, nginx, PHP-FPM containers, services, cert expiry |
+| `lerd logs [-f] [target]` | Show logs for the current project's FPM container, `nginx`, a service name, or a PHP version |
+
+## Project setup
+
+| Command | Description |
+|---|---|
+| `lerd setup` | Interactive project bootstrap — checkbox list of steps to run in sequence |
+| `lerd setup --all` | Run all setup steps without prompting (useful in CI) |
+| `lerd setup --skip-open` | Same as above but don't open the browser at the end |
+
+## Site management
+
+| Command | Description |
+|---|---|
+| `lerd park [dir]` | Register all Laravel projects inside `dir` (defaults to cwd) |
+| `lerd unpark [dir]` | Remove a parked directory and unlink all its sites |
+| `lerd link [name]` | Register the current directory as a site |
+| `lerd link [name] --domain foo.test` | Register with a custom domain |
+| `lerd unlink [name]` | Stop serving the site |
+| `lerd sites` | Table view of all registered sites |
+| `lerd open [name]` | Open the site in the default browser |
+| `lerd share [name]` | Expose the site publicly via ngrok or Expose (auto-detected) |
+| `lerd secure [name]` | Issue a mkcert TLS cert and enable HTTPS — updates `APP_URL` in `.env` |
+| `lerd unsecure [name]` | Remove TLS and switch back to HTTP — updates `APP_URL` in `.env` |
+| `lerd env` | Configure `.env` for the current project with lerd service connection settings |
+
+## PHP
+
+| Command | Description |
+|---|---|
+| `lerd use <version>` | Set the global PHP version and build the FPM image if needed |
+| `lerd isolate <version>` | Pin PHP version for cwd — writes `.php-version` |
+| `lerd php:list` | List all installed PHP-FPM versions |
+| `lerd php:rebuild` | Force-rebuild all installed PHP-FPM images |
+| `lerd fetch [version...]` | Pre-build PHP FPM images for the given (or all supported) versions |
+| `lerd php [args...]` | Run PHP in the project's container |
+| `lerd artisan [args...]` | Run `php artisan` in the project's container |
+| `lerd xdebug on [version]` | Enable Xdebug for a PHP version |
+| `lerd xdebug off [version]` | Disable Xdebug |
+| `lerd xdebug status` | Show Xdebug enabled/disabled for all installed PHP versions |
+
+## Node
+
+| Command | Description |
+|---|---|
+| `lerd isolate:node <version>` | Pin Node version for cwd — writes `.node-version`, runs `fnm install` |
+| `lerd node [args...]` | Run node using the project's version via fnm |
+| `lerd npm [args...]` | Run npm using the project's version via fnm |
+| `lerd npx [args...]` | Run npx using the project's version via fnm |
+
+## Services
+
+| Command | Description |
+|---|---|
+| `lerd service start <name>` | Start a service (auto-installs on first use) |
+| `lerd service stop <name>` | Stop a service container |
+| `lerd service restart <name>` | Restart a service container |
+| `lerd service status <name>` | Show systemd unit status |
+| `lerd service list` | Show all services and their current state |
+
+## Database
+
+| Command | Description |
+|---|---|
+| `lerd db:create [name]` | Create a database and a `<name>_testing` database |
+| `lerd db:import <file.sql>` | Import a SQL dump into the current site's database |
+| `lerd db:export [-o file.sql]` | Export the current site's database |
+| `lerd db:shell` | Open an interactive MySQL or PostgreSQL shell |
+
+## Queue workers
+
+| Command | Description |
+|---|---|
+| `lerd queue:start` | Start a queue worker for the current project |
+| `lerd queue:stop` | Stop the queue worker for the current project |
+
+## Shell completion
+
+```bash
+lerd completion bash   # add to ~/.bashrc
+lerd completion zsh    # add to ~/.zshrc
+lerd completion fish   # add to ~/.config/fish/completions/lerd.fish
+```
