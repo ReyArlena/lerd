@@ -57,6 +57,10 @@
 | `lerd xdebug on [version]` | Enable Xdebug for a PHP version |
 | `lerd xdebug off [version]` | Disable Xdebug |
 | `lerd xdebug status` | Show Xdebug enabled/disabled for all installed PHP versions |
+| `lerd php:ext add <ext> [version]` | Add a custom PHP extension and rebuild the FPM image |
+| `lerd php:ext remove <ext> [version]` | Remove a custom PHP extension and rebuild |
+| `lerd php:ext list [version]` | List custom extensions for a PHP version |
+| `lerd php:ini [version]` | Open the user php.ini for a PHP version in `$EDITOR` |
 
 ## Node
 

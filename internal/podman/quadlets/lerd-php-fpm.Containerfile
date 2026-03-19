@@ -18,6 +18,10 @@ RUN apk update && apk add --no-cache \
         imagemagick-dev \
         imagemagick \
         gmp-dev \
+        bzip2-dev \
+        openldap-dev \
+        sqlite-dev \
+        libxslt-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         curl \
@@ -33,6 +37,19 @@ RUN apk update && apk add --no-cache \
         exif \
         sockets \
         gmp \
+        bz2 \
+        calendar \
+        dba \
+        ldap \
+        mysqli \
+        pdo_sqlite \
+        sqlite3 \
+        soap \
+        shmop \
+        sysvmsg \
+        sysvsem \
+        sysvshm \
+        xsl \
     && (docker-php-ext-enable opcache || true) \
     && { (pecl install redis && docker-php-ext-enable redis) \
          || (git clone --depth 1 https://github.com/phpredis/phpredis /tmp/phpredis \
@@ -46,6 +63,8 @@ RUN apk update && apk add --no-cache \
              && docker-php-ext-enable imagick \
              && rm -rf /tmp/imagick) \
          || true; } \
+    && { (pecl install igbinary && docker-php-ext-enable igbinary) || true; } \
+    && { (pecl install mongodb && docker-php-ext-enable mongodb) || true; } \
     && rm -rf /tmp/pear /var/cache/apk/*
 
 # Override pool: run workers as root, log errors to stderr
@@ -54,3 +73,5 @@ RUN printf '[www]\nuser=root\ngroup=root\ncatch_workers_output=yes\nphp_flag[dis
 # Xdebug always installed; mode controlled via mounted ini (mode=off by default)
 RUN pecl install xdebug && docker-php-ext-enable xdebug \
     && rm -rf /tmp/pear /var/cache/apk/*
+
+{{.CustomExtensions}}

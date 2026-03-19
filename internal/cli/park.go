@@ -15,6 +15,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// warnMissingExtensions checks composer.json for ext-* requirements and warns if any are
+// not covered by the bundled image or the user's custom extension list.
+func warnMissingExtensions(dir, name, phpVersion string, cfg *config.GlobalConfig) {
+	detected := phpDet.DetectExtensions(dir)
+	if len(detected) == 0 {
+		return
+	}
+	bundled := podman.BundledExtensions()
+	installed := cfg.GetExtensions(phpVersion)
+
+	inSet := func(ext string, set []string) bool {
+		for _, e := range set {
+			if e == ext {
+				return true
+			}
+		}
+		return false
+	}
+
+	var missing []string
+	for _, ext := range detected {
+		if !inSet(ext, bundled) && !inSet(ext, installed) {
+			missing = append(missing, ext)
+		}
+	}
+	if len(missing) > 0 {
+		fmt.Printf("  [!] %s requires PHP extensions not in the image: %s\n", name, strings.Join(missing, ", "))
+		fmt.Printf("      Run: lerd php:ext add %s\n", strings.Join(missing, " "))
+	}
+}
+
 
 // NewParkCmd returns the park command.
 func NewParkCmd() *cobra.Command {
@@ -153,6 +184,8 @@ func RegisterProject(projectDir string, cfg *config.GlobalConfig) (bool, error) 
 	if err != nil {
 		nodeVersion = cfg.Node.DefaultVersion
 	}
+
+	warnMissingExtensions(projectDir, name, phpVersion, cfg)
 
 	// Skip already-registered sites to avoid overwriting settings like Secured.
 	if existing, err := config.FindSite(name); err == nil && existing != nil {

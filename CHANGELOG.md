@@ -7,6 +7,17 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.5] — 2026-03-19
+
+### Added
+
+- **`lerd php:ext add/remove/list`** — manage custom PHP extensions per version; extensions are persisted in config and included in every image rebuild
+- **Expanded default FPM image** — added `bz2`, `calendar`, `dba`, `ldap`, `mysqli`, `pdo_sqlite`, `sqlite3`, `soap`, `shmop`, `sysvmsg`, `sysvsem`, `sysvshm`, `xsl` (via `docker-php-ext-install`) plus `igbinary` and `mongodb` (via PECL); the default bundle now covers ~30 extensions for Herd-parity
+- **Composer extension detection** — `lerd park` / `lerd link` reads `ext-*` keys from `composer.json` and warns if any required extensions are missing from the image, with an actionable hint
+- **`lerd php:ini [version]`** — opens the per-version user php.ini in `$EDITOR`; the file is mounted into the FPM container at `/usr/local/etc/php/conf.d/98-lerd-user.ini` and created automatically with commented examples on first use
+
+---
+
 ## [0.5.4] — 2026-03-19
 
 ### Added

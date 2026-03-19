@@ -91,6 +91,11 @@ func PHPConfFile(version string) string {
 	return filepath.Join(DataDir(), "php", version, "99-xdebug.ini")
 }
 
+// PHPUserIniFile returns the host path for the per-version user php.ini file.
+func PHPUserIniFile(version string) string {
+	return filepath.Join(DataDir(), "php", version, "98-user.ini")
+}
+
 // CustomServicesDir returns the directory for custom service YAML files.
 func CustomServicesDir() string {
 	return filepath.Join(ConfigDir(), "services")

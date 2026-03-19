@@ -49,15 +49,23 @@ func StoreFPMHash() error {
 // BuildFPMImage builds the lerd PHP-FPM image for the given version if it doesn't exist.
 // Prints build output to stdout so the user can see progress.
 func BuildFPMImage(version string) error {
-	return buildFPMImage(version, false)
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return err
+	}
+	return buildFPMImage(version, false, cfg.GetExtensions(version))
 }
 
 // RebuildFPMImage force-removes and rebuilds the PHP-FPM image for the given version.
 func RebuildFPMImage(version string) error {
-	return buildFPMImage(version, true)
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return err
+	}
+	return buildFPMImage(version, true, cfg.GetExtensions(version))
 }
 
-func buildFPMImage(version string, force bool) error {
+func buildFPMImage(version string, force bool, customExts []string) error {
 	short := strings.ReplaceAll(version, ".", "")
 	imageName := "lerd-php" + short + "-fpm:local"
 
@@ -80,6 +88,7 @@ func buildFPMImage(version string, force bool) error {
 		return err
 	}
 	containerfile := strings.ReplaceAll(containerfileTmpl, "{{.Version}}", version)
+	containerfile = strings.ReplaceAll(containerfile, "{{.CustomExtensions}}", buildCustomExtBlock(customExts))
 
 	tmp, err := os.MkdirTemp("", "lerd-php-build-*")
 	if err != nil {
@@ -103,6 +112,22 @@ func buildFPMImage(version string, force bool) error {
 	return nil
 }
 
+// buildCustomExtBlock generates Dockerfile RUN blocks for user-configured extensions.
+func buildCustomExtBlock(exts []string) string {
+	if len(exts) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("# User-configured extensions\n")
+	for _, ext := range exts {
+		sb.WriteString(fmt.Sprintf(
+			"RUN { (pecl install %s && docker-php-ext-enable %s) || docker-php-ext-install %s || true; } \\\n    && rm -rf /tmp/pear /var/cache/apk/*\n",
+			ext, ext, ext,
+		))
+	}
+	return sb.String()
+}
+
 // WriteXdebugIni writes the per-version xdebug ini to the host config dir.
 // The file is volume-mounted into the FPM container at /usr/local/etc/php/conf.d/99-xdebug.ini.
 func WriteXdebugIni(version string, enabled bool) error {
@@ -119,10 +144,14 @@ func WriteXdebugIni(version string, enabled bool) error {
 }
 
 // WriteFPMQuadlet writes (or overwrites) the systemd quadlet for a PHP-FPM version
-// and reloads the systemd daemon. It also ensures the xdebug ini file exists.
+// and reloads the systemd daemon. It also ensures the xdebug and user ini files exist.
 func WriteFPMQuadlet(version string) error {
 	short := strings.ReplaceAll(version, ".", "")
 	unitName := "lerd-php" + short + "-fpm"
+
+	if err := EnsureUserIni(version); err != nil {
+		return fmt.Errorf("creating user ini: %w", err)
+	}
 
 	tmplContent, err := GetQuadletTemplate("lerd-php-fpm.container.tmpl")
 	if err != nil {
@@ -131,9 +160,30 @@ func WriteFPMQuadlet(version string) error {
 	content := strings.ReplaceAll(tmplContent, "{{.Version}}", version)
 	content = strings.ReplaceAll(content, "{{.VersionShort}}", short)
 	content = strings.ReplaceAll(content, "{{.XdebugIniPath}}", config.PHPConfFile(version))
+	content = strings.ReplaceAll(content, "{{.UserIniPath}}", config.PHPUserIniFile(version))
 
 	if err := WriteQuadlet(unitName, content); err != nil {
 		return err
 	}
 	return DaemonReload()
+}
+
+// EnsureUserIni creates the per-version user php.ini with defaults if it doesn't exist.
+func EnsureUserIni(version string) error {
+	path := config.PHPUserIniFile(version)
+	if _, err := os.Stat(path); err == nil {
+		return nil // already exists
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	content := "; Lerd per-version PHP settings for PHP " + version + "\n" +
+		"; Edit this file, then restart: systemctl --user restart lerd-php" +
+		strings.ReplaceAll(version, ".", "") + "-fpm\n" +
+		";\n" +
+		"; memory_limit = 512M\n" +
+		"; upload_max_filesize = 64M\n" +
+		"; post_max_size = 64M\n" +
+		"; max_execution_time = 60\n"
+	return os.WriteFile(path, []byte(content), 0644)
 }

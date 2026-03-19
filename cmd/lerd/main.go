@@ -64,6 +64,8 @@ func main() {
 	root.AddCommand(cli.NewDbCreateCmd())
 	root.AddCommand(cli.NewDbShellCmd())
 	root.AddCommand(cli.NewXdebugCmd())
+	root.AddCommand(cli.NewPhpExtCmd())
+	root.AddCommand(cli.NewPhpIniCmd())
 	root.AddCommand(cli.NewShareCmd())
 	root.AddCommand(cli.NewSetupCmd())
 	root.AddCommand(cli.NewTrayCmd())

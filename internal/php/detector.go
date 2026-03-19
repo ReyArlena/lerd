@@ -11,6 +11,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DetectExtensions reads composer.json in dir and returns the list of PHP extensions
+// declared in the require map (ext-* keys), with the "ext-" prefix stripped.
+// Returns an empty slice on any error (non-fatal).
+func DetectExtensions(dir string) []string {
+	data, err := os.ReadFile(filepath.Join(dir, "composer.json"))
+	if err != nil {
+		return nil
+	}
+	var composer struct {
+		Require map[string]string `json:"require"`
+	}
+	if err := json.Unmarshal(data, &composer); err != nil {
+		return nil
+	}
+	var exts []string
+	for key := range composer.Require {
+		if strings.HasPrefix(key, "ext-") {
+			exts = append(exts, strings.TrimPrefix(key, "ext-"))
+		}
+	}
+	return exts
+}
+
 // DetectVersion detects the PHP version for the given directory.
 // It checks, in order:
 //  1. .lerd.yaml php_version field (explicit lerd override)

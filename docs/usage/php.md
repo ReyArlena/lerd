@@ -14,6 +14,10 @@
 | `lerd xdebug on [version]` | Enable Xdebug for a PHP version — rebuilds the FPM image and restarts the container |
 | `lerd xdebug off [version]` | Disable Xdebug — rebuilds without Xdebug and restarts |
 | `lerd xdebug status` | Show Xdebug enabled/disabled for all installed PHP versions |
+| `lerd php:ext add <ext> [version]` | Add a custom PHP extension to the FPM image and rebuild |
+| `lerd php:ext remove <ext> [version]` | Remove a custom PHP extension and rebuild |
+| `lerd php:ext list [version]` | List custom extensions configured for a PHP version |
+| `lerd php:ini [version]` | Open the user php.ini for a PHP version in `$EDITOR` |
 
 If no version is given, the version is resolved from the current directory (`.php-version` or `composer.json`, falling back to the global default).
 
@@ -55,3 +59,49 @@ lerd use 8.4
     - `xdebug.client_port=9003`
 
     Set your IDE to listen on port `9003`. In VS Code, the default PHP Debug configuration works without changes. In PhpStorm, set **Settings → PHP → Debug → Debug port** to `9003`.
+
+---
+
+## Custom extensions
+
+The default lerd FPM image ships ~30 extensions covering the vast majority of Laravel projects (`bcmath`, `bz2`, `calendar`, `curl`, `dba`, `exif`, `gd`, `gmp`, `igbinary`, `imagick`, `intl`, `ldap`, `mbstring`, `mongodb`, `mysqli`, `opcache`, `pcntl`, `pdo_mysql`, `pdo_pgsql`, `pdo_sqlite`, `redis`, `soap`, `shmop`, `sockets`, `sqlite3`, `sysvmsg`, `sysvsem`, `sysvshm`, `xdebug`, `xsl`, `zip`, and more).
+
+To add an extension that isn't in the bundle:
+
+```bash
+lerd php:ext add swoole          # uses detected/default PHP version
+lerd php:ext add swoole 8.3      # explicit version
+```
+
+This rebuilds the FPM image with the extension installed and restarts the container. Extensions are persisted in `~/.config/lerd/config.yaml` so they survive `lerd php:rebuild`.
+
+```bash
+lerd php:ext list                # show custom extensions for current version
+lerd php:ext remove swoole       # remove and rebuild
+```
+
+### php.ini settings
+
+Each PHP version has a user-editable ini file at `~/.local/share/lerd/php/<version>/98-lerd-user.ini`, mounted read-only into the FPM container. Edit it with:
+
+```bash
+lerd php:ini          # detected/default version
+lerd php:ini 8.3      # explicit version
+```
+
+This opens the file in `$EDITOR` (falls back to `nano`/`vim`). After saving, restart FPM to apply:
+
+```bash
+systemctl --user restart lerd-php84-fpm
+```
+
+The file is created automatically with commented-out examples when lerd first sets up the PHP version.
+
+### Composer.json detection
+
+When you run `lerd park` or `lerd link`, Lerd reads `composer.json` and warns if any `ext-*` requirements are not covered by the bundled or installed extension set:
+
+```
+[!] my-app requires PHP extensions not in the image: swoole
+    Run: lerd php:ext add swoole
+```

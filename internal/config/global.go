@@ -17,8 +17,9 @@ type ServiceConfig struct {
 // GlobalConfig is the top-level lerd configuration.
 type GlobalConfig struct {
 	PHP struct {
-		DefaultVersion string          `yaml:"default_version" mapstructure:"default_version"`
-		XdebugEnabled  map[string]bool `yaml:"xdebug_enabled"  mapstructure:"xdebug_enabled"`
+		DefaultVersion string              `yaml:"default_version" mapstructure:"default_version"`
+		XdebugEnabled  map[string]bool     `yaml:"xdebug_enabled"  mapstructure:"xdebug_enabled"`
+		Extensions     map[string][]string `yaml:"extensions"      mapstructure:"extensions"`
 	} `yaml:"php" mapstructure:"php"`
 	Node struct {
 		DefaultVersion string `yaml:"default_version" mapstructure:"default_version"`
@@ -122,6 +123,46 @@ func (c *GlobalConfig) SetXdebug(version string, enabled bool) {
 		return
 	}
 	c.PHP.XdebugEnabled[version] = true
+}
+
+// GetExtensions returns the custom extensions configured for the given PHP version.
+func (c *GlobalConfig) GetExtensions(version string) []string {
+	if c.PHP.Extensions == nil {
+		return nil
+	}
+	return c.PHP.Extensions[version]
+}
+
+// AddExtension adds ext to the custom extension list for version (no-op if already present).
+func (c *GlobalConfig) AddExtension(version, ext string) {
+	if c.PHP.Extensions == nil {
+		c.PHP.Extensions = map[string][]string{}
+	}
+	for _, e := range c.PHP.Extensions[version] {
+		if e == ext {
+			return
+		}
+	}
+	c.PHP.Extensions[version] = append(c.PHP.Extensions[version], ext)
+}
+
+// RemoveExtension removes ext from the custom extension list for version.
+func (c *GlobalConfig) RemoveExtension(version, ext string) {
+	if c.PHP.Extensions == nil {
+		return
+	}
+	exts := c.PHP.Extensions[version]
+	filtered := exts[:0]
+	for _, e := range exts {
+		if e != ext {
+			filtered = append(filtered, e)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(c.PHP.Extensions, version)
+	} else {
+		c.PHP.Extensions[version] = filtered
+	}
 }
 
 // SaveGlobal writes the configuration to config.yaml.
