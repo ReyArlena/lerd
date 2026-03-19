@@ -61,6 +61,8 @@ func main() {
 	root.AddCommand(cli.NewDbCmd())
 	root.AddCommand(cli.NewDbImportCmd())
 	root.AddCommand(cli.NewDbExportCmd())
+	root.AddCommand(cli.NewDbCreateCmd())
+	root.AddCommand(cli.NewDbShellCmd())
 	root.AddCommand(cli.NewXdebugCmd())
 	root.AddCommand(cli.NewShareCmd())
 	root.AddCommand(cli.NewSetupCmd())
