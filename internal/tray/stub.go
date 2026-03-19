@@ -2,9 +2,42 @@
 
 package tray
 
-import "fmt"
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"syscall"
+)
 
-// Run returns an error when the binary was built without CGo/AppIndicator support.
-func Run(_ bool) error {
-	return fmt.Errorf("system tray not available (built without CGo/AppIndicator support)")
+// Run tries to exec the lerd-tray helper binary installed alongside lerd.
+// If the helper is absent or its shared library is missing the error is
+// silently swallowed — the rest of lerd keeps working without a tray.
+func Run(mono bool) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+	helper := filepath.Join(filepath.Dir(exe), "lerd-tray")
+	if _, err := os.Stat(helper); err != nil {
+		return nil // helper not installed
+	}
+
+	var args []string
+	if !mono {
+		args = append(args, "--mono=false")
+	}
+
+	null, err := os.Open(os.DevNull)
+	if err != nil {
+		return nil
+	}
+	defer null.Close()
+
+	cmd := exec.Command(helper, args...)
+	cmd.Stdin = null
+	cmd.Stdout = null
+	cmd.Stderr = null
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	_ = cmd.Start() // ignore error — missing library, permissions, etc.
+	return nil
 }

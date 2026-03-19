@@ -59,21 +59,31 @@ func runUpdate(currentVersion string) error {
 	}
 
 	fmt.Printf("  --> Downloading lerd v%s ... ", lat)
-	binary, cleanup, err := downloadReleaseBinary(latest)
+	extracted, cleanup, err := downloadReleaseBinary(latest)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 	fmt.Println("OK")
 
-	// Write to a temp file beside the binary then rename (atomic on same filesystem).
+	// Atomically replace lerd.
 	tmp := self + ".tmp"
-	if err := copyFile(binary, tmp, 0755); err != nil {
+	if err := copyFile(filepath.Join(extracted, "lerd"), tmp, 0755); err != nil {
 		return fmt.Errorf("writing update: %w", err)
 	}
 	if err := os.Rename(tmp, self); err != nil {
 		os.Remove(tmp)
 		return fmt.Errorf("replacing binary: %w", err)
+	}
+
+	// Also replace lerd-tray if it was included in this release.
+	trayBin := filepath.Join(extracted, "lerd-tray")
+	if _, err := os.Stat(trayBin); err == nil {
+		selfTray := filepath.Join(filepath.Dir(self), "lerd-tray")
+		tmpTray := selfTray + ".tmp"
+		if err := copyFile(trayBin, tmpTray, 0755); err == nil {
+			os.Rename(tmpTray, selfTray) //nolint:errcheck
+		}
 	}
 
 	fmt.Printf("\nLerd updated to v%s — applying infrastructure changes...\n\n", lat)
@@ -136,6 +146,8 @@ func fetchLatestVersion() (string, error) {
 
 // downloadReleaseBinary downloads and extracts the release archive for the
 // current platform. Returns the path to the extracted binary and a cleanup func.
+// downloadReleaseBinary downloads and extracts the release archive for the
+// current platform. Returns the path to the extracted directory and a cleanup func.
 func downloadReleaseBinary(version string) (string, func(), error) {
 	arch := runtime.GOARCH // "amd64" or "arm64"
 	ver := stripV(version)
@@ -161,12 +173,11 @@ func downloadReleaseBinary(version string) (string, func(), error) {
 		return "", func() {}, fmt.Errorf("extract failed: %w\n%s", err, out)
 	}
 
-	binary := filepath.Join(tmp, "lerd")
-	if _, err := os.Stat(binary); err != nil {
+	if _, err := os.Stat(filepath.Join(tmp, "lerd")); err != nil {
 		cleanup()
 		return "", func() {}, fmt.Errorf("binary not found in archive")
 	}
-	return binary, cleanup, nil
+	return tmp, cleanup, nil
 }
 
 func selfPath() (string, error) {

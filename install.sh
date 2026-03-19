@@ -363,6 +363,7 @@ cmd_install() {
     local tmpdir; tmpdir="$(mktemp -d)"
     download_binary "$version" "$arch" "$tmpdir"
     install -m 755 "${tmpdir}/lerd" "${INSTALL_DIR}/${BINARY}"
+    [ -f "${tmpdir}/lerd-tray" ] && install -m 755 "${tmpdir}/lerd-tray" "${INSTALL_DIR}/lerd-tray"
     rm -rf "$tmpdir"
     success "Installed lerd v${version} → ${INSTALL_DIR}/${BINARY}"
   fi

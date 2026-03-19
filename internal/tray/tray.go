@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -60,7 +61,11 @@ func detach(mono bool) error {
 	if err != nil {
 		return err
 	}
-	args := []string{"tray"}
+	// lerd-tray is a standalone binary — no "tray" subcommand needed.
+	var args []string
+	if filepath.Base(exe) != "lerd-tray" {
+		args = append(args, "tray")
+	}
 	if mono {
 		args = append(args, "--mono")
 	} else {
