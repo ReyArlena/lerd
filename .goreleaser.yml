@@ -62,8 +62,16 @@ builds:
       - -X github.com/geodro/lerd/internal/version.Date={{.Date}}
 
 archives:
-  - id: lerd
-    builds: [lerd-amd64, lerd-arm64, lerd-tray-amd64]
+  - id: lerd-amd64
+    ids: [lerd-amd64, lerd-tray-amd64]
+    name_template: "lerd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    files:
+      - README.md
+      - install.sh
+
+  - id: lerd-arm64
+    ids: [lerd-arm64]
     name_template: "lerd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
     files:
