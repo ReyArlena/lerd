@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/geodro/lerd/internal/mcp"
 	"github.com/spf13/cobra"
@@ -96,8 +97,56 @@ func runMCPInject(targetPath string) error {
 	}
 	fmt.Printf("  wrote   .claude/skills/lerd/SKILL.md\n")
 
+	// .junie/guidelines.md — merge our section (Junie's equivalent of Claude skills)
+	guidelinesPath := filepath.Join(abs, ".junie", "guidelines.md")
+	if err := mergeJunieGuidelines(guidelinesPath, junieGuidelinesSection); err != nil {
+		return fmt.Errorf("writing .junie/guidelines.md: %w", err)
+	}
+	fmt.Printf("  updated .junie/guidelines.md\n")
+
 	fmt.Println("\nDone! Restart your AI assistant to load the lerd MCP server.")
 	return nil
+}
+
+// mergeJunieGuidelines upserts the lerd section inside .junie/guidelines.md.
+// If the file does not exist it is created. If a lerd section already exists
+// (delimited by the sentinel comments) it is replaced; otherwise the section
+// is appended.
+func mergeJunieGuidelines(path, section string) error {
+	const begin = "<!-- lerd:begin -->"
+	const end = "<!-- lerd:end -->"
+
+	existing := ""
+	if data, err := os.ReadFile(path); err == nil {
+		existing = string(data)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	block := begin + "\n" + section + "\n" + end
+
+	if strings.Contains(existing, begin) {
+		// Replace the existing lerd block.
+		startIdx := strings.Index(existing, begin)
+		endIdx := strings.Index(existing, end)
+		if endIdx == -1 {
+			// Malformed — replace from begin to EOF.
+			existing = strings.TrimRight(existing[:startIdx], "\n") + "\n\n" + block + "\n"
+		} else {
+			existing = existing[:startIdx] + block + existing[endIdx+len(end):]
+		}
+	} else {
+		// Append, ensuring a blank line separator.
+		if existing != "" {
+			existing = strings.TrimRight(existing, "\n") + "\n\n"
+		}
+		existing += block + "\n"
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(existing), 0644)
 }
 
 // mergeMCPServersJSON reads an existing JSON file (if present), adds or updates
@@ -133,7 +182,7 @@ const bt = "`"
 
 const claudeSkillContent = `---
 name: lerd
-description: Manage the lerd local Laravel development environment — run artisan commands, manage services, start/stop queue workers, and inspect site status via MCP tools.
+description: Manage the lerd local Laravel development environment — run artisan commands, manage services, start/stop queue workers, run composer, manage Node.js versions, and inspect site status via MCP tools.
 ---
 # Lerd — Laravel Local Dev Environment
 
@@ -142,8 +191,11 @@ This project runs on **lerd**, a Podman-based Laravel development environment fo
 ## Architecture
 
 - PHP runs inside Podman containers named ` + bt + `lerd-php<version>-fpm` + bt + ` (e.g. ` + bt + `lerd-php84-fpm` + bt + `)
+- Each PHP-FPM container includes **composer** and **node/npm** so you can run all tooling without leaving the container
 - Nginx routes ` + bt + `*.test` + bt + ` domains to the appropriate FPM container
 - Services (MySQL, Redis, PostgreSQL, etc.) run as Podman containers via systemd quadlets
+- Custom services (MongoDB, RabbitMQ, …) can be added with ` + bt + `service_add` + bt + ` and managed identically to built-in ones
+- Node.js versions are managed by **fnm** (Fast Node Manager); pin per-project with a ` + bt + `.node-version` + bt + ` file
 - Queue workers run as systemd user services named ` + bt + `lerd-queue-<sitename>` + bt + `
 - DNS resolves ` + bt + `*.test` + bt + ` to ` + bt + `127.0.0.1` + bt + `
 
@@ -151,6 +203,9 @@ This project runs on **lerd**, a Podman-based Laravel development environment fo
 
 ### ` + bt + `sites` + bt + `
 List all registered lerd sites with domains, paths, PHP versions, Node versions, and queue status. **Call this first** to find site names and paths needed by other tools.
+
+### ` + bt + `runtime_versions` + bt + `
+List all installed PHP and Node.js versions and the configured defaults. Call this to check what runtimes are available before running commands.
 
 ### ` + bt + `artisan` + bt + `
 Run ` + bt + `php artisan` + bt + ` inside the PHP-FPM container for the project. Arguments:
@@ -168,10 +223,34 @@ artisan(path: "/home/user/code/myapp", args: ["tinker", "--execute=echo App\\Mod
 
 > **Note:** ` + bt + `tinker` + bt + ` requires ` + bt + `--execute=<code>` + bt + ` for non-interactive use.
 
-### ` + bt + `service_start` + bt + ` / ` + bt + `service_stop` + bt + `
-Start or stop a service. Valid names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `, ` + bt + `soketi` + bt + `
+### ` + bt + `composer` + bt + `
+Run ` + bt + `composer` + bt + ` inside the PHP-FPM container for the project. Arguments:
+- ` + bt + `path` + bt + ` (required): absolute path to the Laravel project root
+- ` + bt + `args` + bt + ` (required): composer arguments as an array
 
-**.env values for lerd services:**
+Examples:
+` + "```" + `
+composer(path: "/home/user/code/myapp", args: ["install"])
+composer(path: "/home/user/code/myapp", args: ["require", "laravel/sanctum"])
+composer(path: "/home/user/code/myapp", args: ["dump-autoload"])
+composer(path: "/home/user/code/myapp", args: ["update", "laravel/framework"])
+` + "```" + `
+
+### ` + bt + `node_install` + bt + ` / ` + bt + `node_uninstall` + bt + `
+Install or uninstall a Node.js version via fnm. Accepts a version number or alias:
+` + "```" + `
+node_install(version: "20")
+node_install(version: "20.11.0")
+node_install(version: "lts")
+node_uninstall(version: "18.20.0")
+` + "```" + `
+
+After installing a version you can pin it to a project by writing a ` + bt + `.node-version` + bt + ` file in the project root (or run ` + bt + `lerd isolate:node <version>` + bt + ` from a terminal).
+
+### ` + bt + `service_start` + bt + ` / ` + bt + `service_stop` + bt + `
+Start or stop a service. Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `, ` + bt + `soketi` + bt + `. Custom service names also accepted after being registered with ` + bt + `service_add` + bt + `.
+
+**.env values for built-in lerd services:**
 
 | Service | Host | Key vars |
 |---------|------|----------|
@@ -181,6 +260,61 @@ Start or stop a service. Valid names: ` + bt + `mysql` + bt + `, ` + bt + `redis
 | mailpit | ` + bt + `lerd-mailpit:1025` + bt + ` | web UI: http://localhost:8025 |
 | meilisearch | ` + bt + `lerd-meilisearch:7700` + bt + ` | |
 | minio | ` + bt + `lerd-minio:9000` + bt + ` | ` + bt + `AWS_USE_PATH_STYLE_ENDPOINT=true` + bt + ` |
+
+### ` + bt + `service_add` + bt + ` / ` + bt + `service_remove` + bt + `
+Register or remove a custom OCI-based service. Arguments for ` + bt + `service_add` + bt + `:
+- ` + bt + `name` + bt + ` (required): slug, e.g. ` + bt + `"mongodb"` + bt + `
+- ` + bt + `image` + bt + ` (required): OCI image, e.g. ` + bt + `"docker.io/library/mongo:7"` + bt + `
+- ` + bt + `ports` + bt + ` (optional): array of ` + bt + `"host:container"` + bt + ` mappings
+- ` + bt + `environment` + bt + ` (optional): array of ` + bt + `"KEY=VALUE"` + bt + ` strings for the container
+- ` + bt + `env_vars` + bt + ` (optional): array of ` + bt + `"KEY=VALUE"` + bt + ` strings shown in ` + bt + `lerd env` + bt + ` suggestions
+- ` + bt + `data_dir` + bt + ` (optional): mount path inside container for persistent data
+- ` + bt + `description` + bt + ` (optional): human-readable description
+- ` + bt + `dashboard` + bt + ` (optional): URL for the service's web UI
+
+Example — add MongoDB:
+` + "```" + `
+service_add(
+  name: "mongodb",
+  image: "docker.io/library/mongo:7",
+  ports: ["27017:27017"],
+  data_dir: "/data/db",
+  env_vars: ["MONGODB_URL=mongodb://lerd-mongodb:27017"]
+)
+service_start(name: "mongodb")
+` + "```" + `
+
+` + bt + `service_remove` + bt + ` stops and deregisters a custom service. Persistent data is NOT deleted.
+
+### ` + bt + `env_setup` + bt + `
+Configure the project's ` + bt + `.env` + bt + ` for lerd in one call:
+- Creates ` + bt + `.env` + bt + ` from ` + bt + `.env.example` + bt + ` if it doesn't exist
+- Detects which services (MySQL, Redis, …) the project uses and sets lerd connection values
+- Starts any referenced services that aren't running
+- Creates the project database (and ` + bt + `<name>_testing` + bt + ` database)
+- Generates ` + bt + `APP_KEY` + bt + ` if missing
+- Sets ` + bt + `APP_URL` + bt + ` to the registered ` + bt + `.test` + bt + ` domain
+
+Arguments:
+- ` + bt + `path` + bt + ` (required): absolute path to the Laravel project root
+
+> Run this right after ` + bt + `site_link` + bt + ` when setting up a fresh project.
+
+### ` + bt + `site_link` + bt + ` / ` + bt + `site_unlink` + bt + `
+Register or unregister a directory as a lerd site. Arguments for ` + bt + `site_link` + bt + `:
+- ` + bt + `path` + bt + ` (required): absolute path to the project directory
+- ` + bt + `name` + bt + ` (optional): site name (defaults to directory name, cleaned up)
+- ` + bt + `domain` + bt + ` (optional): custom domain (defaults to ` + bt + `<name>.test` + bt + `)
+
+` + bt + `site_unlink` + bt + ` takes ` + bt + `site` + bt + ` (site name from ` + bt + `sites` + bt + ` tool). Project files are NOT deleted.
+
+### ` + bt + `secure` + bt + ` / ` + bt + `unsecure` + bt + `
+Enable or disable HTTPS for a site using a locally-trusted mkcert certificate. Both take ` + bt + `site` + bt + ` (site name). ` + bt + `APP_URL` + bt + ` in ` + bt + `.env` + bt + ` is updated automatically.
+
+### ` + bt + `xdebug_on` + bt + ` / ` + bt + `xdebug_off` + bt + ` / ` + bt + `xdebug_status` + bt + `
+Toggle Xdebug for a PHP version (restarts the FPM container). Optional ` + bt + `version` + bt + ` argument — defaults to the project or global PHP version. Xdebug listens on port ` + bt + `9003` + bt + ` at ` + bt + `host.containers.internal` + bt + `.
+
+` + bt + `xdebug_status` + bt + ` returns the enabled/disabled state for all installed PHP versions.
 
 ### ` + bt + `queue_start` + bt + ` / ` + bt + `queue_stop` + bt + `
 Start or stop a Laravel queue worker for a site. The worker runs ` + bt + `php artisan queue:work` + bt + ` in the FPM container as a systemd service. Arguments for ` + bt + `queue_start` + bt + `:
@@ -192,7 +326,7 @@ Start or stop a Laravel queue worker for a site. The worker runs ` + bt + `php a
 ### ` + bt + `logs` + bt + `
 Fetch recent container logs. Target can be:
 - ` + bt + `"nginx"` + bt + ` — nginx proxy logs
-- Service name: ` + bt + `"mysql"` + bt + `, ` + bt + `"redis"` + bt + `, etc.
+- Service name: ` + bt + `"mysql"` + bt + `, ` + bt + `"redis"` + bt + `, or any custom service name
 - PHP version: ` + bt + `"8.4"` + bt + ` — logs for that PHP-FPM container
 - Site name — logs for the site's PHP-FPM container
 
@@ -200,17 +334,63 @@ Optional ` + bt + `lines` + bt + ` parameter (default: 50).
 
 ## Common Workflows
 
+**Check installed runtimes before starting:**
+` + "```" + `
+runtime_versions()   // see PHP and Node.js versions available
+` + "```" + `
+
+**Set up a brand-new cloned project (full flow):**
+` + "```" + `
+site_link(path: "/home/user/code/myapp")
+env_setup(path: "/home/user/code/myapp")    // auto-configures .env, starts services, creates DB
+composer(path: "/home/user/code/myapp", args: ["install"])
+artisan(path: "/home/user/code/myapp", args: ["migrate", "--seed"])
+` + "```" + `
+
+**Enable HTTPS for a site:**
+` + "```" + `
+secure(site: "myapp")
+` + "```" + `
+
+**Enable Xdebug for a debugging session:**
+` + "```" + `
+xdebug_status()              // check current state
+xdebug_on(version: "8.4")   // enable and restart FPM
+// ... debug ...
+xdebug_off(version: "8.4")  // disable when done (Xdebug adds overhead)
+` + "```" + `
+
 **Run migrations after schema changes:**
 ` + "```" + `
 artisan(path, args: ["migrate"])
 ` + "```" + `
 
-**Set up a fresh project:**
+**Install and configure a service:**
 ` + "```" + `
 service_start(name: "mysql")
 service_start(name: "redis")   // if needed
+composer(path, args: ["install"])
 artisan(path, args: ["key:generate"])
 artisan(path, args: ["migrate", "--seed"])
+` + "```" + `
+
+**Install a new package:**
+` + "```" + `
+composer(path, args: ["require", "spatie/laravel-permission"])
+artisan(path, args: ["vendor:publish", "--provider=Spatie\\Permission\\PermissionServiceProvider"])
+artisan(path, args: ["migrate"])
+` + "```" + `
+
+**Install a Node.js version and pin it to the project:**
+` + "```" + `
+node_install(version: "20")
+// Then in a terminal: lerd isolate:node 20
+` + "```" + `
+
+**Add a custom service (e.g. MongoDB):**
+` + "```" + `
+service_add(name: "mongodb", image: "docker.io/library/mongo:7", ports: ["27017:27017"], data_dir: "/data/db")
+service_start(name: "mongodb")
 ` + "```" + `
 
 **Diagnose PHP errors:**
@@ -231,4 +411,53 @@ artisan(path, args: ["make:migration", "add_status_to_orders"])
 // ... edit the migration file ...
 artisan(path, args: ["migrate"])
 ` + "```" + `
+`
+
+// junieGuidelinesSection is the lerd block written into .junie/guidelines.md.
+// It is wrapped in sentinel comments by mergeJunieGuidelines so it can be
+// cleanly updated on subsequent mcp:inject runs.
+const junieGuidelinesSection = `## Lerd — Laravel Local Dev Environment
+
+This project runs on **lerd**, a Podman-based Laravel development environment. The ` + bt + `lerd` + bt + ` MCP server is available — use it to manage the environment without leaving the chat.
+
+### Architecture
+
+- PHP runs in Podman containers named ` + bt + `lerd-php<version>-fpm` + bt + ` (e.g. ` + bt + `lerd-php84-fpm` + bt + `); each container includes composer and node/npm
+- Nginx routes ` + bt + `*.test` + bt + ` domains to the correct PHP-FPM container
+- Services (MySQL, Redis, PostgreSQL, etc.) and custom services run as Podman containers via systemd quadlets
+- Node.js versions are managed by fnm; per-project version is set via a ` + bt + `.node-version` + bt + ` file
+- Queue workers run as systemd user services named ` + bt + `lerd-queue-<sitename>` + bt + `
+
+### Available MCP tools
+
+| Tool | What it does |
+|------|-------------|
+| ` + bt + `sites` + bt + ` | List all registered sites — call this first to find paths and site names |
+| ` + bt + `runtime_versions` + bt + ` | List installed PHP and Node.js versions with defaults |
+| ` + bt + `artisan` + bt + ` | Run ` + bt + `php artisan` + bt + ` inside the PHP-FPM container |
+| ` + bt + `composer` + bt + ` | Run ` + bt + `composer` + bt + ` inside the PHP-FPM container |
+| ` + bt + `node_install` + bt + ` | Install a Node.js version via fnm (e.g. ` + bt + `"20"` + bt + `, ` + bt + `"lts"` + bt + `) |
+| ` + bt + `node_uninstall` + bt + ` | Uninstall a Node.js version via fnm |
+| ` + bt + `env_setup` + bt + ` | Configure ` + bt + `.env` + bt + ` for lerd: detects services, starts them, creates DB, generates APP_KEY |
+| ` + bt + `site_link` + bt + ` | Register a directory as a lerd site (creates nginx vhost + ` + bt + `.test` + bt + ` domain) |
+| ` + bt + `site_unlink` + bt + ` | Unregister a site and remove its nginx vhost |
+| ` + bt + `secure` + bt + ` | Enable HTTPS for a site (mkcert) — updates APP_URL automatically |
+| ` + bt + `unsecure` + bt + ` | Disable HTTPS for a site |
+| ` + bt + `xdebug_on` + bt + ` | Enable Xdebug for a PHP version (port 9003) |
+| ` + bt + `xdebug_off` + bt + ` | Disable Xdebug for a PHP version |
+| ` + bt + `xdebug_status` + bt + ` | Show Xdebug state for all PHP versions |
+| ` + bt + `service_start` + bt + ` | Start a built-in or custom service |
+| ` + bt + `service_stop` + bt + ` | Stop a service |
+| ` + bt + `service_add` + bt + ` | Register a new custom OCI service (MongoDB, RabbitMQ, …) |
+| ` + bt + `service_remove` + bt + ` | Stop and deregister a custom service |
+| ` + bt + `queue_start` + bt + ` | Start a queue worker for a site |
+| ` + bt + `queue_stop` + bt + ` | Stop a queue worker |
+| ` + bt + `logs` + bt + ` | Fetch container logs (nginx, service name, PHP version, or site name) |
+
+### Key conventions
+
+- ` + bt + `artisan` + bt + ` and ` + bt + `composer` + bt + ` take ` + bt + `path` + bt + ` (absolute project root) and ` + bt + `args` + bt + ` (array)
+- ` + bt + `tinker` + bt + ` must use ` + bt + `--execute=<code>` + bt + ` for non-interactive use
+- Built-in service hosts follow the pattern ` + bt + `lerd-<name>` + bt + ` (e.g. ` + bt + `lerd-mysql` + bt + `, ` + bt + `lerd-redis` + bt + `)
+- Default DB credentials: username ` + bt + `root` + bt + `, password ` + bt + `lerd` + bt + `
 `

@@ -10,7 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/geodro/lerd/internal/certs"
 	"github.com/geodro/lerd/internal/config"
+	"github.com/geodro/lerd/internal/envfile"
+	"github.com/geodro/lerd/internal/nginx"
+	nodeDet "github.com/geodro/lerd/internal/node"
 	phpDet "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	lerdSystemd "github.com/geodro/lerd/internal/systemd"
@@ -235,6 +239,228 @@ func toolList() []mcpTool {
 				Required: []string{"target"},
 			},
 		},
+		{
+			Name:        "composer",
+			Description: "Run a Composer command inside the lerd PHP-FPM container for the project. Use this to install dependencies, require packages, run scripts, or any other composer command.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"path": {
+						Type:        "string",
+						Description: "Absolute path to the Laravel project root (e.g. /home/user/code/myapp)",
+					},
+					"args": {
+						Type:        "array",
+						Description: `Composer arguments as an array, e.g. ["install"] or ["require", "laravel/sanctum"] or ["dump-autoload"]`,
+					},
+				},
+				Required: []string{"path", "args"},
+			},
+		},
+		{
+			Name:        "node_install",
+			Description: "Install a Node.js version via fnm so it can be used by lerd sites. Accepts a version number (e.g. \"20\", \"20.11.0\") or alias (e.g. \"lts\").",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"version": {
+						Type:        "string",
+						Description: `Node.js version or alias to install, e.g. "20", "20.11.0", "lts"`,
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		{
+			Name:        "node_uninstall",
+			Description: "Uninstall a Node.js version via fnm.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"version": {
+						Type:        "string",
+						Description: `Node.js version to uninstall, e.g. "20.11.0"`,
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		{
+			Name:        "runtime_versions",
+			Description: "List installed PHP and Node.js versions managed by lerd, plus default versions. Use this to check what runtimes are available before running commands.",
+			InputSchema: mcpSchema{
+				Type:       "object",
+				Properties: map[string]mcpProp{},
+			},
+		},
+		{
+			Name:        "service_add",
+			Description: "Register a new custom OCI-based service with lerd (e.g. MongoDB, RabbitMQ, Cassandra). Writes a systemd quadlet so the service can be started/stopped like built-in services.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"name": {
+						Type:        "string",
+						Description: "Service slug, lowercase letters/digits/hyphens only (e.g. \"mongodb\")",
+					},
+					"image": {
+						Type:        "string",
+						Description: "OCI image reference (e.g. \"docker.io/library/mongo:7\")",
+					},
+					"ports": {
+						Type:        "array",
+						Description: `Port mappings as \"host:container\" strings, e.g. ["27017:27017"]`,
+					},
+					"environment": {
+						Type:        "array",
+						Description: `Container environment variables as \"KEY=VALUE\" strings`,
+					},
+					"env_vars": {
+						Type:        "array",
+						Description: `Project .env variables to inject (shown by lerd env), as \"KEY=VALUE\" strings`,
+					},
+					"data_dir": {
+						Type:        "string",
+						Description: "Mount path inside the container for persistent data (host directory is auto-created)",
+					},
+					"description": {
+						Type:        "string",
+						Description: "Human-readable description of the service",
+					},
+					"dashboard": {
+						Type:        "string",
+						Description: "URL to open for this service's web dashboard (e.g. \"http://localhost:8080\")",
+					},
+				},
+				Required: []string{"name", "image"},
+			},
+		},
+		{
+			Name:        "service_remove",
+			Description: "Stop and remove a custom lerd service. Built-in services (mysql, redis, etc.) cannot be removed. Persistent data is NOT deleted.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"name": {
+						Type:        "string",
+						Description: "Name of the custom service to remove",
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		{
+			Name:        "env_setup",
+			Description: "Configure the project's .env for lerd: creates .env from .env.example if missing, detects services (mysql, redis, etc.), starts them, creates databases, generates APP_KEY, and sets APP_URL. Run this once after cloning a project.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"path": {
+						Type:        "string",
+						Description: "Absolute path to the Laravel project root",
+					},
+				},
+				Required: []string{"path"},
+			},
+		},
+		{
+			Name:        "site_link",
+			Description: "Register a directory as a lerd site, generating an nginx vhost and a <name>.test domain. Use this to set up a new project.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"path": {
+						Type:        "string",
+						Description: "Absolute path to the project directory",
+					},
+					"name": {
+						Type:        "string",
+						Description: "Site name (defaults to the directory name, cleaned up)",
+					},
+					"domain": {
+						Type:        "string",
+						Description: "Custom domain (defaults to <name>.test)",
+					},
+				},
+				Required: []string{"path"},
+			},
+		},
+		{
+			Name:        "site_unlink",
+			Description: "Unregister a lerd site and remove its nginx vhost. The project files are NOT deleted.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"site": {
+						Type:        "string",
+						Description: "Site name as shown by the sites tool",
+					},
+				},
+				Required: []string{"site"},
+			},
+		},
+		{
+			Name:        "secure",
+			Description: "Enable HTTPS for a lerd site using a locally-trusted mkcert certificate. Updates APP_URL in .env automatically.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"site": {
+						Type:        "string",
+						Description: "Site name as shown by the sites tool",
+					},
+				},
+				Required: []string{"site"},
+			},
+		},
+		{
+			Name:        "unsecure",
+			Description: "Disable HTTPS for a lerd site and revert APP_URL in .env to http://.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"site": {
+						Type:        "string",
+						Description: "Site name as shown by the sites tool",
+					},
+				},
+				Required: []string{"site"},
+			},
+		},
+		{
+			Name:        "xdebug_on",
+			Description: "Enable Xdebug for a PHP version and restart the FPM container. Xdebug listens on port 9003 (host.containers.internal).",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"version": {
+						Type:        "string",
+						Description: "PHP version (e.g. \"8.4\"). Defaults to the project or global default.",
+					},
+				},
+			},
+		},
+		{
+			Name:        "xdebug_off",
+			Description: "Disable Xdebug for a PHP version and restart the FPM container.",
+			InputSchema: mcpSchema{
+				Type: "object",
+				Properties: map[string]mcpProp{
+					"version": {
+						Type:        "string",
+						Description: "PHP version (e.g. \"8.4\"). Defaults to the project or global default.",
+					},
+				},
+			},
+		},
+		{
+			Name:        "xdebug_status",
+			Description: "Show Xdebug enabled/disabled status for all installed PHP versions.",
+			InputSchema: mcpSchema{
+				Type:       "object",
+				Properties: map[string]mcpProp{},
+			},
+		},
 	}
 }
 
@@ -274,6 +500,34 @@ func handleToolCall(params json.RawMessage) (any, *rpcError) {
 		return execQueueStop(args)
 	case "logs":
 		return execLogs(args)
+	case "composer":
+		return execComposer(args)
+	case "node_install":
+		return execNodeInstall(args)
+	case "node_uninstall":
+		return execNodeUninstall(args)
+	case "runtime_versions":
+		return execRuntimeVersions()
+	case "service_add":
+		return execServiceAdd(args)
+	case "service_remove":
+		return execServiceRemove(args)
+	case "env_setup":
+		return execEnvSetup(args)
+	case "site_link":
+		return execSiteLink(args)
+	case "site_unlink":
+		return execSiteUnlink(args)
+	case "secure":
+		return execSecure(args)
+	case "unsecure":
+		return execUnsecure(args)
+	case "xdebug_on":
+		return execXdebugToggle(args, true)
+	case "xdebug_off":
+		return execXdebugToggle(args, false)
+	case "xdebug_status":
+		return execXdebugStatus()
 	default:
 		return toolErr("unknown tool: " + p.Name), nil
 	}
@@ -421,18 +675,31 @@ func execSites() (any, *rpcError) {
 
 func execServiceStart(args map[string]any) (any, *rpcError) {
 	name := strArg(args, "name")
-	if !isKnownService(name) {
-		return toolErr("unknown service: " + name + ". Valid: " + strings.Join(knownServices, ", ")), nil
+	if name == "" {
+		return toolErr("name is required"), nil
 	}
 
 	unitName := "lerd-" + name
-	content, err := podman.GetQuadletTemplate(unitName + ".container")
-	if err != nil {
-		return toolErr("no quadlet template for " + name + ": " + err.Error()), nil
+
+	if isKnownService(name) {
+		content, err := podman.GetQuadletTemplate(unitName + ".container")
+		if err != nil {
+			return toolErr("no quadlet template for " + name + ": " + err.Error()), nil
+		}
+		if err := podman.WriteQuadlet(unitName, content); err != nil {
+			return toolErr("writing quadlet: " + err.Error()), nil
+		}
+	} else {
+		svc, err := config.LoadCustomService(name)
+		if err != nil {
+			return toolErr("unknown service: " + name + ". Use service_add to register a custom service first."), nil
+		}
+		content := podman.GenerateCustomQuadlet(svc)
+		if err := podman.WriteQuadlet(unitName, content); err != nil {
+			return toolErr("writing quadlet: " + err.Error()), nil
+		}
 	}
-	if err := podman.WriteQuadlet(unitName, content); err != nil {
-		return toolErr("writing quadlet: " + err.Error()), nil
-	}
+
 	if err := podman.DaemonReload(); err != nil {
 		return toolErr("daemon-reload: " + err.Error()), nil
 	}
@@ -444,8 +711,8 @@ func execServiceStart(args map[string]any) (any, *rpcError) {
 
 func execServiceStop(args map[string]any) (any, *rpcError) {
 	name := strArg(args, "name")
-	if !isKnownService(name) {
-		return toolErr("unknown service: " + name + ". Valid: " + strings.Join(knownServices, ", ")), nil
+	if name == "" {
+		return toolErr("name is required"), nil
 	}
 	if err := podman.StopUnit("lerd-" + name); err != nil {
 		return toolErr("stopping " + name + ": " + err.Error()), nil
@@ -571,4 +838,500 @@ func resolveLogsContainer(target string) (string, error) {
 		return "lerd-php" + short + "-fpm", nil
 	}
 	return "", fmt.Errorf("unknown log target %q — valid: nginx, service name, PHP version (e.g. 8.4), or site name", target)
+}
+
+func execComposer(args map[string]any) (any, *rpcError) {
+	projectPath := strArg(args, "path")
+	if projectPath == "" {
+		return toolErr("path is required"), nil
+	}
+	composerArgs := strSliceArg(args, "args")
+	if len(composerArgs) == 0 {
+		return toolErr("args is required and must be a non-empty array"), nil
+	}
+
+	phpVersion, err := phpDet.DetectVersion(projectPath)
+	if err != nil {
+		cfg, cfgErr := config.LoadGlobal()
+		if cfgErr != nil {
+			return toolErr("failed to detect PHP version: " + err.Error()), nil
+		}
+		phpVersion = cfg.PHP.DefaultVersion
+	}
+
+	short := strings.ReplaceAll(phpVersion, ".", "")
+	container := "lerd-php" + short + "-fpm"
+
+	cmdArgs := []string{"exec", "-w", projectPath, container, "composer"}
+	cmdArgs = append(cmdArgs, composerArgs...)
+
+	var out bytes.Buffer
+	cmd := exec.Command("podman", cmdArgs...)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return toolErr(fmt.Sprintf("composer failed (%v):\n%s", err, out.String())), nil
+	}
+	return toolOK(strings.TrimSpace(out.String())), nil
+}
+
+func execNodeInstall(args map[string]any) (any, *rpcError) {
+	version := strArg(args, "version")
+	if version == "" {
+		return toolErr("version is required"), nil
+	}
+
+	fnmPath := filepath.Join(config.BinDir(), "fnm")
+	if _, err := os.Stat(fnmPath); err != nil {
+		return toolErr("fnm not found — run 'lerd install' to set up Node.js management"), nil
+	}
+
+	var out bytes.Buffer
+	cmd := exec.Command(fnmPath, "install", version)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return toolErr(fmt.Sprintf("fnm install %s failed (%v):\n%s", version, err, out.String())), nil
+	}
+	return toolOK(strings.TrimSpace(out.String())), nil
+}
+
+func execNodeUninstall(args map[string]any) (any, *rpcError) {
+	version := strArg(args, "version")
+	if version == "" {
+		return toolErr("version is required"), nil
+	}
+
+	fnmPath := filepath.Join(config.BinDir(), "fnm")
+	if _, err := os.Stat(fnmPath); err != nil {
+		return toolErr("fnm not found — run 'lerd install' to set up Node.js management"), nil
+	}
+
+	var out bytes.Buffer
+	cmd := exec.Command(fnmPath, "uninstall", version)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return toolErr(fmt.Sprintf("fnm uninstall %s failed (%v):\n%s", version, err, out.String())), nil
+	}
+	return toolOK(strings.TrimSpace(out.String())), nil
+}
+
+func execRuntimeVersions() (any, *rpcError) {
+	cfg, _ := config.LoadGlobal()
+
+	// PHP versions
+	phpVersions, _ := phpDet.ListInstalled()
+	defaultPHP := ""
+	if cfg != nil {
+		defaultPHP = cfg.PHP.DefaultVersion
+	}
+
+	// Node.js versions via fnm
+	fnmPath := filepath.Join(config.BinDir(), "fnm")
+	var nodeVersions []string
+	defaultNode := ""
+	if cfg != nil {
+		defaultNode = cfg.Node.DefaultVersion
+	}
+	if _, err := os.Stat(fnmPath); err == nil {
+		var out bytes.Buffer
+		cmd := exec.Command(fnmPath, "list")
+		cmd.Stdout = &out
+		cmd.Stderr = &out
+		if cmd.Run() == nil {
+			for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+				line = strings.TrimSpace(line)
+				// fnm list output: "* v20.11.0 default" or "  v18.20.0"
+				line = strings.TrimPrefix(line, "* ")
+				line = strings.TrimPrefix(line, "  ")
+				if line != "" {
+					nodeVersions = append(nodeVersions, line)
+				}
+			}
+		}
+	}
+
+	type runtimeEntry struct {
+		Installed      []string `json:"installed"`
+		DefaultVersion string   `json:"default_version"`
+	}
+	type runtimeResult struct {
+		PHP  runtimeEntry `json:"php"`
+		Node runtimeEntry `json:"node"`
+	}
+
+	if phpVersions == nil {
+		phpVersions = []string{}
+	}
+	if nodeVersions == nil {
+		nodeVersions = []string{}
+	}
+
+	data, _ := json.MarshalIndent(runtimeResult{
+		PHP:  runtimeEntry{Installed: phpVersions, DefaultVersion: defaultPHP},
+		Node: runtimeEntry{Installed: nodeVersions, DefaultVersion: defaultNode},
+	}, "", "  ")
+	return toolOK(string(data)), nil
+}
+
+func execServiceAdd(args map[string]any) (any, *rpcError) {
+	name := strArg(args, "name")
+	if name == "" {
+		return toolErr("name is required"), nil
+	}
+	image := strArg(args, "image")
+	if image == "" {
+		return toolErr("image is required"), nil
+	}
+
+	if isKnownService(name) {
+		return toolErr(name + " is a built-in service and cannot be redefined"), nil
+	}
+	if _, err := config.LoadCustomService(name); err == nil {
+		return toolErr("custom service " + name + " already exists; remove it first with service_remove"), nil
+	}
+
+	svc := &config.CustomService{
+		Name:        name,
+		Image:       image,
+		Ports:       strSliceArg(args, "ports"),
+		EnvVars:     strSliceArg(args, "env_vars"),
+		Description: strArg(args, "description"),
+		Dashboard:   strArg(args, "dashboard"),
+		DataDir:     strArg(args, "data_dir"),
+	}
+
+	if envList := strSliceArg(args, "environment"); len(envList) > 0 {
+		svc.Environment = make(map[string]string, len(envList))
+		for _, kv := range envList {
+			k, v, _ := strings.Cut(kv, "=")
+			svc.Environment[k] = v
+		}
+	}
+
+	if err := config.SaveCustomService(svc); err != nil {
+		return toolErr("saving service config: " + err.Error()), nil
+	}
+
+	if svc.DataDir != "" {
+		if err := os.MkdirAll(config.DataSubDir(svc.Name), 0755); err != nil {
+			return toolErr("creating data directory: " + err.Error()), nil
+		}
+	}
+
+	content := podman.GenerateCustomQuadlet(svc)
+	unitName := "lerd-" + name
+	if err := podman.WriteQuadlet(unitName, content); err != nil {
+		return toolErr("writing quadlet: " + err.Error()), nil
+	}
+	if err := podman.DaemonReload(); err != nil {
+		return toolErr("daemon-reload: " + err.Error()), nil
+	}
+
+	return toolOK(fmt.Sprintf("Custom service %q added. Start it with service_start(name: %q).", name, name)), nil
+}
+
+func execServiceRemove(args map[string]any) (any, *rpcError) {
+	name := strArg(args, "name")
+	if name == "" {
+		return toolErr("name is required"), nil
+	}
+	if isKnownService(name) {
+		return toolErr(name + " is a built-in service and cannot be removed"), nil
+	}
+
+	unit := "lerd-" + name
+	_ = podman.StopUnit(unit)
+	if err := podman.RemoveQuadlet(unit); err != nil {
+		return toolErr("removing quadlet: " + err.Error()), nil
+	}
+	_ = podman.DaemonReload()
+	if err := config.RemoveCustomService(name); err != nil {
+		return toolErr("removing service config: " + err.Error()), nil
+	}
+
+	return toolOK(fmt.Sprintf("Service %q removed. Persistent data was NOT deleted.", name)), nil
+}
+
+func execEnvSetup(args map[string]any) (any, *rpcError) {
+	projectPath := strArg(args, "path")
+	if projectPath == "" {
+		return toolErr("path is required"), nil
+	}
+
+	self, err := os.Executable()
+	if err != nil {
+		return toolErr("could not resolve lerd executable: " + err.Error()), nil
+	}
+
+	var out bytes.Buffer
+	cmd := exec.Command(self, "env")
+	cmd.Dir = projectPath
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return toolErr(fmt.Sprintf("env setup failed (%v):\n%s", err, out.String())), nil
+	}
+	return toolOK(strings.TrimSpace(out.String())), nil
+}
+
+func execSiteLink(args map[string]any) (any, *rpcError) {
+	projectPath := strArg(args, "path")
+	if projectPath == "" {
+		return toolErr("path is required"), nil
+	}
+
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return toolErr("loading config: " + err.Error()), nil
+	}
+
+	rawName := strArg(args, "name")
+	if rawName == "" {
+		rawName = filepath.Base(projectPath)
+	}
+	name, domain := siteLinkNameAndDomain(rawName, cfg.DNS.TLD)
+	if custom := strArg(args, "domain"); custom != "" {
+		domain = strings.ToLower(custom)
+	}
+
+	phpVersion, err := phpDet.DetectVersion(projectPath)
+	if err != nil {
+		phpVersion = cfg.PHP.DefaultVersion
+	}
+
+	nodeVersion, err := nodeDet.DetectVersion(projectPath)
+	if err != nil {
+		nodeVersion = cfg.Node.DefaultVersion
+	}
+
+	secured := false
+	if existing, err := config.FindSite(name); err == nil {
+		secured = existing.Secured
+	}
+
+	site := config.Site{
+		Name:        name,
+		Domain:      domain,
+		Path:        projectPath,
+		PHPVersion:  phpVersion,
+		NodeVersion: nodeVersion,
+		Secured:     secured,
+	}
+
+	if err := config.AddSite(site); err != nil {
+		return toolErr("registering site: " + err.Error()), nil
+	}
+
+	if err := nginx.GenerateVhost(site, phpVersion); err != nil {
+		return toolErr("generating vhost: " + err.Error()), nil
+	}
+
+	// Write quadlet and xdebug ini for this PHP version (non-blocking — image must already exist).
+	short := strings.ReplaceAll(phpVersion, ".", "")
+	_ = podman.WriteXdebugIni(phpVersion, false)
+	if err := podman.WriteFPMQuadlet(phpVersion); err != nil {
+		// Non-fatal: container may already be running.
+		_ = err
+	} else {
+		_ = podman.DaemonReload()
+		_ = podman.StartUnit("lerd-php" + short + "-fpm")
+	}
+
+	if err := nginx.Reload(); err != nil {
+		return toolOK(fmt.Sprintf("Linked %s -> %s (PHP %s, Node %s)\n[WARN] nginx reload: %v", name, domain, phpVersion, nodeVersion, err)), nil
+	}
+
+	return toolOK(fmt.Sprintf("Linked %s -> %s (PHP %s, Node %s)", name, domain, phpVersion, nodeVersion)), nil
+}
+
+func execSiteUnlink(args map[string]any) (any, *rpcError) {
+	siteName := strArg(args, "site")
+	if siteName == "" {
+		return toolErr("site is required"), nil
+	}
+
+	site, err := config.FindSite(siteName)
+	if err != nil {
+		return toolErr(fmt.Sprintf("site %q not found", siteName)), nil
+	}
+
+	if err := nginx.RemoveVhost(site.Domain); err != nil {
+		// Non-fatal — vhost may already be gone.
+		_ = err
+	}
+
+	cfg, _ := config.LoadGlobal()
+	isParked := false
+	if cfg != nil {
+		for _, dir := range cfg.ParkedDirectories {
+			if filepath.Dir(site.Path) == dir {
+				isParked = true
+				break
+			}
+		}
+	}
+
+	if isParked {
+		if err := config.IgnoreSite(siteName); err != nil {
+			return toolErr("ignoring site: " + err.Error()), nil
+		}
+	} else {
+		if err := config.RemoveSite(siteName); err != nil {
+			return toolErr("removing site: " + err.Error()), nil
+		}
+	}
+
+	_ = nginx.Reload()
+	return toolOK(fmt.Sprintf("Unlinked %s (%s)", siteName, site.Domain)), nil
+}
+
+func execSecure(args map[string]any) (any, *rpcError) {
+	siteName := strArg(args, "site")
+	if siteName == "" {
+		return toolErr("site is required"), nil
+	}
+
+	site, err := config.FindSite(siteName)
+	if err != nil {
+		return toolErr(fmt.Sprintf("site %q not found — run site_link first", siteName)), nil
+	}
+
+	if err := certs.SecureSite(*site); err != nil {
+		return toolErr("issuing certificate: " + err.Error()), nil
+	}
+
+	site.Secured = true
+	if err := config.AddSite(*site); err != nil {
+		return toolErr("updating site registry: " + err.Error()), nil
+	}
+
+	if err := envfile.ApplyUpdates(site.Path, map[string]string{
+		"APP_URL": "https://" + site.Domain,
+	}); err != nil {
+		// Non-fatal — .env may not exist.
+		_ = err
+	}
+
+	return toolOK(fmt.Sprintf("Secured: https://%s", site.Domain)), nil
+}
+
+func execUnsecure(args map[string]any) (any, *rpcError) {
+	siteName := strArg(args, "site")
+	if siteName == "" {
+		return toolErr("site is required"), nil
+	}
+
+	site, err := config.FindSite(siteName)
+	if err != nil {
+		return toolErr(fmt.Sprintf("site %q not found", siteName)), nil
+	}
+
+	if err := certs.UnsecureSite(*site); err != nil {
+		return toolErr("removing certificate: " + err.Error()), nil
+	}
+
+	site.Secured = false
+	if err := config.AddSite(*site); err != nil {
+		return toolErr("updating site registry: " + err.Error()), nil
+	}
+
+	if err := envfile.ApplyUpdates(site.Path, map[string]string{
+		"APP_URL": "http://" + site.Domain,
+	}); err != nil {
+		_ = err
+	}
+
+	return toolOK(fmt.Sprintf("Unsecured: http://%s", site.Domain)), nil
+}
+
+func execXdebugToggle(args map[string]any, enable bool) (any, *rpcError) {
+	version := strArg(args, "version")
+	if version == "" {
+		cfg, err := config.LoadGlobal()
+		if err != nil {
+			return toolErr("loading config: " + err.Error()), nil
+		}
+		version = cfg.PHP.DefaultVersion
+	}
+
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return toolErr("loading config: " + err.Error()), nil
+	}
+
+	state := "disabled"
+	if enable {
+		state = "enabled"
+	}
+
+	if cfg.IsXdebugEnabled(version) == enable {
+		return toolOK(fmt.Sprintf("Xdebug is already %s for PHP %s", state, version)), nil
+	}
+
+	cfg.SetXdebug(version, enable)
+	if err := config.SaveGlobal(cfg); err != nil {
+		return toolErr("saving config: " + err.Error()), nil
+	}
+
+	if err := podman.WriteXdebugIni(version, enable); err != nil {
+		return toolErr("writing xdebug ini: " + err.Error()), nil
+	}
+
+	if err := podman.WriteFPMQuadlet(version); err != nil {
+		return toolErr("updating FPM quadlet: " + err.Error()), nil
+	}
+
+	short := strings.ReplaceAll(version, ".", "")
+	unit := "lerd-php" + short + "-fpm"
+	if err := podman.RestartUnit(unit); err != nil {
+		return toolOK(fmt.Sprintf("Xdebug %s for PHP %s\n[WARN] FPM restart failed: %v\nRun: systemctl --user restart %s", state, version, err, unit)), nil
+	}
+
+	return toolOK(fmt.Sprintf("Xdebug %s for PHP %s (port 9003, host.containers.internal)", state, version)), nil
+}
+
+func execXdebugStatus() (any, *rpcError) {
+	versions, err := phpDet.ListInstalled()
+	if err != nil {
+		return toolErr("listing PHP versions: " + err.Error()), nil
+	}
+	if len(versions) == 0 {
+		return toolOK("No PHP versions installed."), nil
+	}
+
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return toolErr("loading config: " + err.Error()), nil
+	}
+
+	type entry struct {
+		Version string `json:"version"`
+		Enabled bool   `json:"enabled"`
+	}
+	result := make([]entry, 0, len(versions))
+	for _, v := range versions {
+		result = append(result, entry{Version: v, Enabled: cfg.IsXdebugEnabled(v)})
+	}
+	data, _ := json.MarshalIndent(result, "", "  ")
+	return toolOK(string(data)), nil
+}
+
+// siteLinkNameAndDomain derives a clean site name and domain from a directory name.
+// Mirrors the logic in internal/cli/park.go — kept in sync manually.
+func siteLinkNameAndDomain(dirName, tld string) (string, string) {
+	knownTLDs := []string{
+		".com", ".net", ".org", ".io", ".co", ".ltd", ".dev", ".app", ".me",
+		".info", ".biz", ".uk", ".us", ".eu", ".de", ".fr", ".ca", ".au",
+	}
+	name := strings.ToLower(dirName)
+	for _, ext := range knownTLDs {
+		if strings.HasSuffix(name, ext) {
+			name = name[:len(name)-len(ext)]
+			break
+		}
+	}
+	name = strings.ReplaceAll(name, ".", "-")
+	return name, name + "." + tld
 }

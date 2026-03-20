@@ -7,6 +7,29 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.10] — 2026-03-20
+
+### Added
+
+- **MCP: 14 new tools** — the `lerd mcp` server now exposes the full project lifecycle:
+  - `composer` — run Composer inside the PHP-FPM container
+  - `node_install` / `node_uninstall` — install or uninstall Node.js versions via fnm
+  - `runtime_versions` — list installed PHP and Node.js versions with defaults
+  - `env_setup` — configure `.env` for lerd (detects services, starts them, creates DB, generates `APP_KEY`, sets `APP_URL`)
+  - `site_link` / `site_unlink` — register or unregister a directory as a lerd site
+  - `secure` / `unsecure` — enable or disable HTTPS for a site; updates `APP_URL` automatically
+  - `xdebug_on` / `xdebug_off` / `xdebug_status` — toggle Xdebug per PHP version and check state
+  - `service_add` / `service_remove` — register or deregister custom OCI services
+- **MCP: `service_start` / `service_stop` support custom services** — previously only worked for built-in services
+- **MCP: `.junie/guidelines.md`** — `lerd mcp:inject` now writes a lerd context section into Junie's guidelines file (merged, not overwritten) so JetBrains Junie has the same tool knowledge as Claude Code
+- **Web UI: tab persistence** — active tab (Sites, Services, System) is now stored in the URL hash (`/#services`) so refreshing the browser returns to the same tab
+
+### Fixed
+
+- MCP skill content updated with all new tools, workflows, and architecture notes
+
+---
+
 ## [0.5.9] — 2026-03-20
 
 ### Added

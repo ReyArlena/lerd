@@ -60,17 +60,17 @@
           <!-- Nav tabs -->
           <div class="flex items-center gap-1">
             <button
-              @click="tab = 'sites'"
+              @click="setTab('sites')"
               :class="tab === 'sites' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
               class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
             >Sites</button>
             <button
-              @click="tab = 'services'"
+              @click="setTab('services')"
               :class="tab === 'services' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
               class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
             >Services</button>
             <button
-              @click="tab = 'system'"
+              @click="setTab('system')"
               :class="tab === 'system' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
               class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
             >System</button>
@@ -654,7 +654,7 @@
 function lerdApp() {
   return {
     theme: localStorage.getItem('lerd-theme') || 'auto',
-    tab: 'sites',
+    tab: ['sites','services','system'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'sites',
     sites: [],
     sitesLoading: false,
     phpVersions: [],
@@ -694,6 +694,10 @@ function lerdApp() {
       this.theme = t;
       localStorage.setItem('lerd-theme', t);
       this.applyTheme(t);
+    },
+    setTab(t) {
+      this.tab = t;
+      location.hash = t;
     },
 
     init() {

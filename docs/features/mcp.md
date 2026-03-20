@@ -13,13 +13,14 @@ cd ~/Lerd/my-app
 lerd mcp:inject
 ```
 
-This writes three files:
+This writes four files:
 
 | File | Purpose |
 |---|---|
 | `.mcp.json` | MCP server entry for Claude Code |
 | `.claude/skills/lerd/SKILL.md` | Skill file that teaches Claude about lerd tools |
 | `.junie/mcp/mcp.json` | MCP server entry for JetBrains Junie |
+| `.junie/guidelines.md` | Lerd context section for JetBrains Junie (merged, not overwritten) |
 
 The command **merges** into existing configs — other MCP servers (e.g. `laravel-boost`, `herd`) are left untouched. Re-running it is safe.
 
@@ -37,10 +38,24 @@ Once the MCP server is connected, your AI assistant has access to:
 
 | Tool | Description |
 |---|---|
-| `sites` | List all registered lerd sites (name, domain, path, PHP version, queue status) |
+| `sites` | List all registered lerd sites (name, domain, path, PHP/Node version, queue status) |
+| `runtime_versions` | List installed PHP and Node.js versions with configured defaults |
 | `artisan` | Run `php artisan` in the PHP-FPM container — migrations, generators, seeders, cache, tinker |
-| `service_start` | Start an infrastructure service (mysql, redis, postgres, …) |
+| `composer` | Run `composer` in the PHP-FPM container — install, require, dump-autoload, etc. |
+| `node_install` | Install a Node.js version via fnm (e.g. `"20"`, `"lts"`) |
+| `node_uninstall` | Uninstall a Node.js version via fnm |
+| `env_setup` | Configure `.env` for lerd: detects services, starts them, creates DB, sets APP_KEY and APP_URL |
+| `site_link` | Register a directory as a lerd site — generates nginx vhost and `.test` domain |
+| `site_unlink` | Unregister a site and remove its nginx vhost |
+| `secure` | Enable HTTPS for a site using a locally-trusted mkcert certificate |
+| `unsecure` | Disable HTTPS for a site |
+| `xdebug_on` | Enable Xdebug for a PHP version and restart the FPM container |
+| `xdebug_off` | Disable Xdebug for a PHP version |
+| `xdebug_status` | Show Xdebug enabled/disabled state for all PHP versions |
+| `service_start` | Start a built-in or custom service |
 | `service_stop` | Stop a service |
+| `service_add` | Register a new custom OCI-based service (MongoDB, RabbitMQ, …) |
+| `service_remove` | Stop and deregister a custom service |
 | `queue_start` | Start a queue worker for a site |
 | `queue_stop` | Stop a queue worker |
 | `logs` | Fetch recent container logs (nginx, any service, PHP version, or site name) |
@@ -54,6 +69,34 @@ You: run migrations for the whitewaters project
 AI:  → sites()           # finds path /home/user/Lerd/whitewaters
      → artisan(path: "/home/user/Lerd/whitewaters", args: ["migrate"])
      ✓  Ran 3 migrations in 42ms
+
+You: install sanctum and run its migrations
+AI:  → composer(path: "/home/user/Lerd/whitewaters", args: ["require", "laravel/sanctum"])
+     → artisan(path: "/home/user/Lerd/whitewaters", args: ["vendor:publish", "--provider=Laravel\\Sanctum\\SanctumServiceProvider"])
+     → artisan(path: "/home/user/Lerd/whitewaters", args: ["migrate"])
+
+You: add a MongoDB service
+AI:  → service_add(name: "mongodb", image: "docker.io/library/mongo:7", ports: ["27017:27017"], data_dir: "/data/db")
+     → service_start(name: "mongodb")
+     ✓  mongodb started
+
+You: what PHP and Node versions are installed?
+AI:  → runtime_versions()
+     { "php": { "installed": ["8.3", "8.4"], "default_version": "8.4" },
+       "node": { "installed": ["v20.11.0", "v18.20.4"], "default_version": "20" } }
+
+You: set up the whitewaters project I just cloned to ~/Lerd/whitewaters
+AI:  → site_link(path: "/home/user/Lerd/whitewaters")
+     → env_setup(path: "/home/user/Lerd/whitewaters")
+       # detects MySQL + Redis, starts them, creates database, generates APP_KEY
+     → composer(path: "/home/user/Lerd/whitewaters", args: ["install"])
+     → artisan(path: "/home/user/Lerd/whitewaters", args: ["migrate", "--seed"])
+     ✓  whitewaters -> whitewaters.test ready
+
+You: enable xdebug so I can step through a failing job
+AI:  → xdebug_status()         # check current state
+     → xdebug_on(version: "8.4")
+     ✓  Xdebug enabled for PHP 8.4 (port 9003)
 
 You: the app is throwing 500s — check the logs
 AI:  → logs(target: "8.4", lines: 50)
