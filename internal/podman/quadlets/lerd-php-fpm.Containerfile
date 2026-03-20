@@ -1,5 +1,5 @@
-FROM composer:latest AS composer-bin
-FROM php:{{.Version}}-fpm-alpine
+FROM docker.io/library/composer:latest AS composer-bin
+FROM docker.io/library/php:{{.Version}}-fpm-alpine
 
 RUN apk update && apk add --no-cache \
         autoconf \
