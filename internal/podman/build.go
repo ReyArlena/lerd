@@ -165,8 +165,8 @@ func WriteXdebugIni(version string, enabled bool) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-// WriteFPMQuadlet writes (or overwrites) the systemd quadlet for a PHP-FPM version
-// and reloads the systemd daemon. It also ensures the xdebug and user ini files exist.
+// WriteFPMQuadlet writes the systemd quadlet for a PHP-FPM version and reloads the
+// systemd daemon if the content changed. It also ensures the xdebug and user ini files exist.
 func WriteFPMQuadlet(version string) error {
 	short := strings.ReplaceAll(version, ".", "")
 	unitName := "lerd-php" + short + "-fpm"
@@ -183,6 +183,15 @@ func WriteFPMQuadlet(version string) error {
 	content = strings.ReplaceAll(content, "{{.VersionShort}}", short)
 	content = strings.ReplaceAll(content, "{{.XdebugIniPath}}", config.PHPConfFile(version))
 	content = strings.ReplaceAll(content, "{{.UserIniPath}}", config.PHPUserIniFile(version))
+
+	// Skip the write and daemon-reload if the quadlet is already up to date.
+	// Unnecessary daemon-reloads cause Podman's quadlet generator to regenerate
+	// all service files, which can briefly disrupt lerd-dns and cause
+	// systemd-resolved to mark 127.0.0.1:5300 as failed (breaking .test resolution).
+	existingPath := filepath.Join(config.QuadletDir(), unitName+".container")
+	if existing, err := os.ReadFile(existingPath); err == nil && string(existing) == content {
+		return nil
+	}
 
 	if err := WriteQuadlet(unitName, content); err != nil {
 		return err

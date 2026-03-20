@@ -72,4 +72,4 @@ myapp           myapp.test               8.4    22     ✓     ~/Lerd/myapp
 
 ## Web UI
 
-In the Sites tab, any site that has active worktrees shows a branch icon in the sidebar. Clicking the site opens its detail panel which lists each worktree with a direct link to open it in the browser.
+In the Sites tab, any site that has active worktrees shows a branch icon in the sidebar. Clicking the site opens its detail panel which lists the worktrees as a tree. The **main checkout's current branch** is shown at the top of the tree with a link to the main site's domain, followed by each worktree branch below it.

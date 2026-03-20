@@ -3,8 +3,13 @@ package cli
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
+	"strings"
 
+	"github.com/geodro/lerd/internal/config"
+	"github.com/geodro/lerd/internal/envfile"
+	lerdSystemd "github.com/geodro/lerd/internal/systemd"
+	"github.com/geodro/lerd/internal/podman"
 	"github.com/spf13/cobra"
 )
 
@@ -12,6 +17,7 @@ import (
 func NewStripeCmds() []*cobra.Command {
 	return []*cobra.Command{
 		newStripeListenCmd(),
+		newStripeListenStopCmd(),
 	}
 }
 
@@ -21,56 +27,136 @@ func newStripeListenCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "stripe:listen",
-		Short: "Forward Stripe webhooks to the current site via the Stripe CLI",
-		Long: `Runs the Stripe CLI in a temporary container to forward live/test webhook
-events from Stripe to your local app.
-
-The forward URL is auto-detected from the current site. Override the webhook
-path with --path if your app uses a custom route.
-
-Example:
-  lerd stripe:listen
-  lerd stripe:listen --path /webhooks/stripe`,
-		Args: cobra.NoArgs,
+		Short: "Start a Stripe webhook listener for the current site as a systemd service",
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if apiKey == "" {
-				apiKey = os.Getenv("STRIPE_API_KEY")
-			}
-			if apiKey == "" {
-				return fmt.Errorf("Stripe API key required: pass --api-key or set STRIPE_API_KEY")
-			}
-
 			cwd, err := os.Getwd()
 			if err != nil {
 				return err
 			}
+
+			if apiKey == "" {
+				apiKey = os.Getenv("STRIPE_SECRET")
+			}
+			if apiKey == "" {
+				apiKey = envfile.ReadKey(filepath.Join(cwd, ".env"), "STRIPE_SECRET")
+			}
+			if apiKey == "" {
+				return fmt.Errorf("Stripe API key required: pass --api-key or set STRIPE_SECRET")
+			}
+
 			base := siteURL(cwd)
 			if base == "" {
 				return fmt.Errorf("no registered site found for this directory — run 'lerd link' first")
 			}
-			forwardTo := base + webhookPath
 
-			fmt.Printf("Forwarding Stripe webhooks → %s\n", forwardTo)
-			fmt.Println("Press Ctrl+C to stop.")
-
-			cmdArgs := []string{
-				"run", "--rm", "-it",
-				"--network", "lerd",
-				"docker.io/stripe/stripe-cli:latest",
-				"listen",
-				"--api-key", apiKey,
-				"--forward-to", forwardTo,
-				"--skip-verify",
+			siteName, err := queueSiteName(cwd)
+			if err != nil {
+				return err
 			}
 
-			cmd := exec.Command("podman", cmdArgs...)
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			return cmd.Run()
+			return stripeStartExplicit(siteName, apiKey, base+webhookPath)
 		},
 	}
-	cmd.Flags().StringVar(&apiKey, "api-key", "", "Stripe API key (defaults to $STRIPE_API_KEY)")
+	cmd.Flags().StringVar(&apiKey, "api-key", "", "Stripe API key (defaults to $STRIPE_SECRET)")
 	cmd.Flags().StringVar(&webhookPath, "path", "/stripe/webhook", "Webhook route path on your app")
 	return cmd
+}
+
+func newStripeListenStopCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "stripe:listen stop",
+		Short: "Stop the Stripe webhook listener for the current site",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			siteName, err := queueSiteName(cwd)
+			if err != nil {
+				return err
+			}
+			return StripeStopForSite(siteName)
+		},
+	}
+}
+
+func stripeStartExplicit(siteName, apiKey, forwardTo string) error {
+	unitName := "lerd-stripe-" + siteName
+	containerName := unitName
+
+	unit := fmt.Sprintf(`[Unit]
+Description=Lerd Stripe Listener (%s)
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+ExecStart=podman run --rm --replace --name %s --network host docker.io/stripe/stripe-cli:latest listen --api-key %s --forward-to %s --skip-verify
+
+[Install]
+WantedBy=default.target
+`, siteName, containerName, apiKey, forwardTo)
+
+	if err := lerdSystemd.WriteService(unitName, unit); err != nil {
+		return fmt.Errorf("writing service unit: %w", err)
+	}
+
+	if err := podman.DaemonReload(); err != nil {
+		return fmt.Errorf("daemon-reload: %w", err)
+	}
+
+	if err := lerdSystemd.EnableService(unitName); err != nil {
+		fmt.Printf("[WARN] enable: %v\n", err)
+	}
+
+	if err := lerdSystemd.StartService(unitName); err != nil {
+		return fmt.Errorf("starting stripe listener: %w", err)
+	}
+
+	fmt.Printf("Stripe listener started for %s\n", siteName)
+	fmt.Printf("  Forwarding to: %s\n", forwardTo)
+	fmt.Printf("  Logs: journalctl --user -u %s -f\n", unitName)
+	return nil
+}
+
+// StripeStartForSite starts a Stripe listener for the given site, reading the key from its .env.
+func StripeStartForSite(siteName, sitePath, siteBaseURL string) error {
+	apiKey := envfile.ReadKey(filepath.Join(sitePath, ".env"), "STRIPE_SECRET")
+	if apiKey == "" {
+		return fmt.Errorf("STRIPE_SECRET not set in %s/.env", sitePath)
+	}
+	return stripeStartExplicit(siteName, apiKey, siteBaseURL+"/stripe/webhook")
+}
+
+// StripeStopForSite stops and removes the Stripe listener for the named site.
+func StripeStopForSite(siteName string) error {
+	unitName := "lerd-stripe-" + siteName
+	unitFile := filepath.Join(config.SystemdUserDir(), unitName+".service")
+
+	_ = lerdSystemd.DisableService(unitName)
+	podman.StopUnit(unitName) //nolint:errcheck
+
+	if err := os.Remove(unitFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing unit file: %w", err)
+	}
+
+	if err := podman.DaemonReload(); err != nil {
+		fmt.Printf("[WARN] daemon-reload: %v\n", err)
+	}
+
+	fmt.Printf("Stripe listener stopped for %s\n", siteName)
+	return nil
+}
+
+// StripeSecretSet returns true if STRIPE_SECRET is present in the site's .env.
+func StripeSecretSet(sitePath string) bool {
+	return envfile.ReadKey(filepath.Join(sitePath, ".env"), "STRIPE_SECRET") != ""
+}
+
+// stripeSiteName extracts the site name from a lerd-stripe-* unit name.
+func stripeSiteName(unit string) string {
+	return strings.TrimPrefix(unit, "lerd-stripe-")
 }

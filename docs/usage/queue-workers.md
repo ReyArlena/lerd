@@ -23,6 +23,17 @@ Lerd can run Laravel queue workers as persistent systemd user services. The work
 
 ---
 
+## Redis requirement
+
+If `QUEUE_CONNECTION=redis` is set in the project's `.env`, lerd verifies that `lerd-redis` is running before starting the worker. If it is not, you will see:
+
+```
+queue worker requires Redis (QUEUE_CONNECTION=redis in .env) but lerd-redis is not running
+Start it first: lerd services start redis
+```
+
+---
+
 ## Example
 
 ```bash
@@ -36,4 +47,4 @@ lerd queue:start --queue=emails,default --tries=5 --timeout=120
 
 ## Web UI control
 
-Queue workers are also controllable from the **Sites tab** in the web UI — the amber toggle starts/stops the worker and the **logs** link opens a live log drawer in the browser.
+Queue workers are controllable from the **Sites tab** in the web UI. The amber toggle starts or stops the worker. When a worker is running, a **Queue** log tab appears in the site detail panel alongside PHP-FPM. The amber dot next to the site in the sidebar indicates the worker is active.

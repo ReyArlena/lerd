@@ -59,17 +59,18 @@ func coreUnits() []string {
 	return units
 }
 
-// installedServiceUnits returns service units that have a quadlet file installed.
+// installedServiceUnits returns service units that have a quadlet file installed
+// and have not been manually stopped by the user.
 func installedServiceUnits() []string {
 	var units []string
 	for _, svc := range knownServices {
-		if podman.QuadletInstalled("lerd-" + svc) {
+		if podman.QuadletInstalled("lerd-"+svc) && !config.ServiceIsPaused(svc) {
 			units = append(units, "lerd-"+svc)
 		}
 	}
 	customs, _ := config.ListCustomServices()
 	for _, svc := range customs {
-		if podman.QuadletInstalled("lerd-" + svc.Name) {
+		if podman.QuadletInstalled("lerd-"+svc.Name) && !config.ServiceIsPaused(svc.Name) {
 			units = append(units, "lerd-"+svc.Name)
 		}
 	}

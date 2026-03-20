@@ -208,6 +208,7 @@ This project runs on **lerd**, a Podman-based Laravel development environment fo
 - Custom services (MongoDB, RabbitMQ, …) can be added with ` + bt + `service_add` + bt + ` and managed identically to built-in ones
 - Node.js versions are managed by **fnm** (Fast Node Manager); pin per-project with a ` + bt + `.node-version` + bt + ` file
 - Queue workers run as systemd user services named ` + bt + `lerd-queue-<sitename>` + bt + `
+- Git worktrees automatically get a ` + bt + `<branch>.<site>.test` + bt + ` subdomain; ` + bt + `vendor/` + bt + `, ` + bt + `node_modules/` + bt + `, and ` + bt + `.env` + bt + ` are symlinked/copied from the main checkout
 - DNS resolves ` + bt + `*.test` + bt + ` to ` + bt + `127.0.0.1` + bt + `
 
 ## Available MCP Tools
@@ -259,7 +260,7 @@ node_uninstall(version: "18.20.0")
 After installing a version you can pin it to a project by writing a ` + bt + `.node-version` + bt + ` file in the project root (or run ` + bt + `lerd isolate:node <version>` + bt + ` from a terminal).
 
 ### ` + bt + `service_start` + bt + ` / ` + bt + `service_stop` + bt + `
-Start or stop a service. Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `, ` + bt + `soketi` + bt + `. Custom service names also accepted after being registered with ` + bt + `service_add` + bt + `.
+Start or stop a service. ` + bt + `service_stop` + bt + ` marks the service as **paused** — ` + bt + `lerd start` + bt + ` and autostart on login will skip it until you explicitly start it again. Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `, ` + bt + `soketi` + bt + `. Custom service names also accepted after being registered with ` + bt + `service_add` + bt + `.
 
 **.env values for built-in lerd services:**
 
@@ -328,7 +329,11 @@ Toggle Xdebug for a PHP version (restarts the FPM container). Optional ` + bt + 
 ` + bt + `xdebug_status` + bt + ` returns the enabled/disabled state for all installed PHP versions.
 
 ### ` + bt + `queue_start` + bt + ` / ` + bt + `queue_stop` + bt + `
-Start or stop a Laravel queue worker for a site. The worker runs ` + bt + `php artisan queue:work` + bt + ` in the FPM container as a systemd service. Arguments for ` + bt + `queue_start` + bt + `:
+Start or stop a Laravel queue worker for a site. The worker runs ` + bt + `php artisan queue:work` + bt + ` in the FPM container as a systemd service.
+
+> **Redis queues:** if the project's ` + bt + `.env` + bt + ` has ` + bt + `QUEUE_CONNECTION=redis` + bt + `, lerd will refuse to start the worker unless ` + bt + `lerd-redis` + bt + ` is running. Call ` + bt + `service_start(name: "redis")` + bt + ` first.
+
+Arguments for ` + bt + `queue_start` + bt + `:
 - ` + bt + `site` + bt + ` (required): site name from ` + bt + `sites` + bt + ` tool
 - ` + bt + `queue` + bt + ` (optional): queue name, default ` + bt + `"default"` + bt + `
 - ` + bt + `tries` + bt + ` (optional): max job attempts, default ` + bt + `3` + bt + `
@@ -449,6 +454,7 @@ This project runs on **lerd**, a Podman-based Laravel development environment. T
 - Services (MySQL, Redis, PostgreSQL, etc.) and custom services run as Podman containers via systemd quadlets
 - Node.js versions are managed by fnm; per-project version is set via a ` + bt + `.node-version` + bt + ` file
 - Queue workers run as systemd user services named ` + bt + `lerd-queue-<sitename>` + bt + `
+- Git worktrees automatically get a ` + bt + `<branch>.<site>.test` + bt + ` subdomain; ` + bt + `vendor/` + bt + `, ` + bt + `node_modules/` + bt + `, and ` + bt + `.env` + bt + ` are symlinked/copied from the main checkout
 
 ### Available MCP tools
 
@@ -483,4 +489,6 @@ This project runs on **lerd**, a Podman-based Laravel development environment. T
 - ` + bt + `tinker` + bt + ` must use ` + bt + `--execute=<code>` + bt + ` for non-interactive use
 - Built-in service hosts follow the pattern ` + bt + `lerd-<name>` + bt + ` (e.g. ` + bt + `lerd-mysql` + bt + `, ` + bt + `lerd-redis` + bt + `)
 - Default DB credentials: username ` + bt + `root` + bt + `, password ` + bt + `lerd` + bt + `
+- ` + bt + `service_stop` + bt + ` marks the service paused — ` + bt + `lerd start` + bt + ` skips it until explicitly started again
+- ` + bt + `queue_start` + bt + ` requires Redis to be running when ` + bt + `QUEUE_CONNECTION=redis` + bt + `; call ` + bt + `service_start(name: "redis")` + bt + ` first
 `

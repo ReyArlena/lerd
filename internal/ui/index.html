@@ -44,50 +44,47 @@
 
   <!-- Top Navbar -->
   <nav class="border-b border-gray-200 dark:border-lerd-border bg-white/95 dark:bg-lerd-bg/95 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex items-center justify-between h-14">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6">
+      <div class="flex flex-wrap items-center justify-between gap-y-1 py-2 sm:flex-nowrap sm:h-14 sm:py-0">
 
         <!-- Logo + version -->
-        <div class="flex items-center gap-6">
-          <div class="flex items-center gap-2.5">
-            <svg class="w-6 h-6 text-lerd-red" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-            <span class="font-bold text-gray-900 dark:text-white tracking-tight text-lg">Lerd</span>
-            <span class="text-xs text-gray-400 dark:text-gray-600 font-mono" x-text="'v' + version.current"></span>
-          </div>
+        <div class="flex items-center gap-2.5 order-1">
+          <svg class="w-6 h-6 text-lerd-red" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span class="font-bold text-gray-900 dark:text-white tracking-tight text-lg">Lerd</span>
+          <span class="text-xs text-gray-400 dark:text-gray-600 font-mono" x-text="'v' + version.current"></span>
+        </div>
 
-          <!-- Nav tabs -->
-          <div class="flex items-center gap-1">
-            <button
-              @click="setTab('sites')"
-              :class="tab === 'sites' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
-              class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-            >Sites</button>
-            <button
-              @click="setTab('services')"
-              :class="tab === 'services' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
-              class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-            >Services</button>
-            <button
-              @click="setTab('system')"
-              :class="tab === 'system' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
-              class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-            >System</button>
-          </div>
+        <!-- Nav tabs -->
+        <div class="flex items-center order-3 w-full sm:w-auto sm:order-2 border-t border-gray-100 dark:border-lerd-border sm:border-0 pt-1 sm:pt-0">
+          <button
+            @click="setTab('sites')"
+            :class="tab === 'sites' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
+            class="flex-1 sm:flex-none text-center sm:text-left px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >Sites</button>
+          <button
+            @click="setTab('services')"
+            :class="tab === 'services' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
+            class="flex-1 sm:flex-none text-center sm:text-left px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >Services</button>
+          <button
+            @click="setTab('system')"
+            :class="tab === 'system' ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/10' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'"
+            class="flex-1 sm:flex-none text-center sm:text-left px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >System</button>
         </div>
 
         <!-- Right side: update controls -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 order-2 sm:order-3">
           <!-- Theme toggle -->
           <div class="flex items-center rounded-md border border-gray-200 dark:border-lerd-border overflow-hidden text-xs">
             <template x-for="m in ['light','auto','dark']" :key="m">
               <button
                 @click="setTheme(m)"
                 :class="theme === m ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
-                class="px-2.5 py-1 capitalize transition-colors"
-                x-text="m"
-              ></button>
+                class="px-2 sm:px-2.5 py-1 capitalize transition-colors"
+              ><span class="hidden sm:inline" x-text="m"></span><span class="sm:hidden" x-text="m[0].toUpperCase()"></span></button>
             </template>
           </div>
 
@@ -95,7 +92,7 @@
             <button
               @click="checkVersion()"
               :disabled="version.checking"
-              class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
+              class="hidden sm:inline-block text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
             >
               <span x-show="!version.checking">Check for updates</span>
               <span x-show="version.checking">Checking...</span>
@@ -103,16 +100,16 @@
           </template>
 
           <template x-if="version.checked && !version.hasUpdate">
-            <span class="text-xs text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
+            <span class="hidden sm:flex text-xs text-emerald-600 dark:text-emerald-500 items-center gap-1">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
               Up to date
             </span>
           </template>
 
           <template x-if="version.checked && version.hasUpdate">
-            <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-2">
               <span class="text-xs text-yellow-600 dark:text-yellow-400" x-text="version.latest + ' available'"></span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">— run <code class="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">lerd update</code> in a terminal</span>
+              <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-400">— run <code class="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">lerd update</code> in a terminal</span>
             </div>
           </template>
         </div>
@@ -121,7 +118,7 @@
   </nav>
 
   <!-- Page content -->
-  <main class="max-w-7xl mx-auto px-6 py-8">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8">
 
     <!-- ===== SITES TAB ===== -->
     <div x-show="tab === 'sites'">
@@ -141,7 +138,7 @@
       </template>
 
       <template x-if="!sitesLoading && sites.length === 0">
-        <div class="border border-gray-200 dark:border-lerd-border rounded-xl p-12 text-center">
+        <div class="border border-gray-200 dark:border-lerd-border rounded-xl p-8 sm:p-12 text-center">
           <div class="w-12 h-12 rounded-full bg-gray-100 dark:bg-lerd-card border border-gray-200 dark:border-lerd-border flex items-center justify-center mx-auto mb-4">
             <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
           </div>
@@ -151,10 +148,26 @@
       </template>
 
       <template x-if="!sitesLoading && sites.length > 0">
-        <div class="flex flex-col sm:flex-row gap-4 items-start">
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
 
-          <!-- Left: site list -->
-          <div class="w-full sm:w-64 shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
+          <!-- Mobile: horizontal site picker -->
+          <div class="sm:hidden w-full flex overflow-x-auto gap-2 pb-2 -mx-3 px-3">
+            <template x-for="site in sites" :key="'pill-'+site.domain">
+              <button
+                @click="selectSite(site)"
+                class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors"
+                :class="selectedSiteDomain === site.domain
+                  ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red'
+                  : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'"
+              >
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="site.fpm_running ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"></span>
+                <span x-text="site.domain"></span>
+              </button>
+            </template>
+          </div>
+
+          <!-- Left: site list (desktop only) -->
+          <div class="hidden sm:block sm:w-64 sm:shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
             <template x-for="site in sites" :key="site.domain">
               <button
                 @click="selectSite(site)"
@@ -173,6 +186,7 @@
                   <path d="M6 3v12M15 6a3 3 0 1 0 6 0a3 3 0 1 0-6 0M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0M18 9a9 9 0 0 1-9 9"/>
                 </svg>
                 <span x-show="site.queue_running" class="w-2 h-2 rounded-full shrink-0 bg-amber-400" title="Queue running"></span>
+                <span x-show="site.stripe_running" class="w-2 h-2 rounded-full shrink-0 bg-violet-400" title="Stripe listener running"></span>
               </button>
             </template>
           </div>
@@ -189,8 +203,8 @@
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
 
                 <!-- Header -->
-                <div class="px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
-                  <div class="flex items-start justify-between gap-4">
+                <div class="px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                     <div>
                       <div class="flex items-center gap-2 flex-wrap">
                         <a
@@ -234,7 +248,7 @@
                 </div>
 
                 <!-- Controls -->
-                <div class="px-5 py-4 border-b border-gray-100 dark:border-lerd-border grid grid-cols-2 sm:grid-cols-4 gap-5">
+                <div class="px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border flex flex-wrap gap-x-6 gap-y-4">
 
                   <!-- PHP version -->
                   <div>
@@ -313,14 +327,34 @@
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                           </svg>
                         </button>
-                        <button
-                          x-show="selectedSite.queue_running"
-                          @click="openQueueLogs(selectedSite)"
-                          class="text-xs text-amber-600 dark:text-amber-400 hover:underline"
-                          title="View queue worker logs"
-                        >logs</button>
                       </div>
                       <div x-show="selectedSite.queueError" class="text-[10px] text-red-500" x-text="selectedSite.queueError"></div>
+                    </div>
+                  </div>
+
+                  <!-- Stripe -->
+                  <div x-show="selectedSite.stripe_secret_set">
+                    <div class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Stripe</div>
+                    <div class="flex flex-col items-start gap-1">
+                      <div class="flex items-center gap-2">
+                        <button
+                          @click="toggleStripe(selectedSite)"
+                          :disabled="selectedSite.stripeLoading"
+                          :title="selectedSite.stripe_running ? 'Stop Stripe listener' : 'Start Stripe webhook listener'"
+                          class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                          :class="selectedSite.stripe_running ? 'bg-violet-500' : 'bg-gray-300 dark:bg-lerd-muted'"
+                        >
+                          <span
+                            class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200"
+                            :class="selectedSite.stripe_running ? 'translate-x-4' : 'translate-x-1'"
+                          ></span>
+                          <svg x-show="selectedSite.stripeLoading" class="animate-spin absolute right-[-18px] w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div x-show="selectedSite.stripeError" class="text-[10px] text-red-500" x-text="selectedSite.stripeError"></div>
                     </div>
                   </div>
 
@@ -328,53 +362,153 @@
 
                 <!-- Git Worktrees -->
                 <template x-if="selectedSite.worktrees && selectedSite.worktrees.length > 0">
-                  <div class="px-5 py-4 border-t border-gray-100 dark:border-lerd-border">
+                  <div class="px-3 sm:px-5 py-4 border-t border-gray-100 dark:border-lerd-border">
                     <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Git Worktrees</div>
-                    <div class="flex flex-col gap-2">
-                      <template x-for="wt in selectedSite.worktrees" :key="wt.domain">
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate" x-text="wt.branch"></span>
-                          <a
-                            :href="'http://' + wt.domain"
-                            @click.prevent="openWorktree(wt)"
-                            class="text-xs text-lerd-red hover:underline font-mono truncate"
-                            x-text="wt.domain"
-                          ></a>
+                    <div class="flex flex-col">
+                      <!-- Main repo branch (root of tree) -->
+                      <div class="flex items-center gap-1.5 py-1">
+                        <div class="flex items-center shrink-0 text-gray-300 dark:text-gray-600">
+                          <svg class="w-3.5 h-4" viewBox="0 0 14 16" fill="none">
+                            <path d="M2 8 L2 16" stroke="currentColor" stroke-width="1.5"/>
+                          </svg>
+                        </div>
+                        <svg class="w-3.5 h-3.5 shrink-0 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                          <path d="M6 3v12M15 6a3 3 0 1 0 6 0a3 3 0 1 0-6 0M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0M18 9a9 9 0 0 1-9 9"/>
+                        </svg>
+                        <span class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate flex-1" x-text="selectedSite.branch || 'main'"></span>
+                        <button
+                          @click="openSite(selectedSite)"
+                          class="shrink-0 flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-lerd-red dark:hover:text-lerd-red border border-gray-200 dark:border-lerd-border hover:border-lerd-red/40 rounded px-1.5 py-0.5 transition-colors"
+                          :title="selectedSite.domain"
+                        >
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                          <span class="font-mono" x-text="selectedSite.domain"></span>
+                        </button>
+                      </div>
+                      <!-- Worktree branches -->
+                      <template x-for="(wt, i) in selectedSite.worktrees" :key="wt.domain">
+                        <div class="flex items-center gap-1.5 py-1">
+                          <!-- tree lines -->
+                          <div class="flex items-center shrink-0 text-gray-300 dark:text-gray-600">
+                            <svg class="w-3.5 h-4" viewBox="0 0 14 16" fill="none">
+                              <path :d="i < selectedSite.worktrees.length - 1 ? 'M2 0 L2 16' : 'M2 0 L2 10'" stroke="currentColor" stroke-width="1.5"/>
+                              <path d="M2 10 L10 10" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                          </div>
+                          <!-- branch icon + name -->
+                          <svg class="w-3.5 h-3.5 shrink-0 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M6 3v12M15 6a3 3 0 1 0 6 0a3 3 0 1 0-6 0M3 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0M18 9a9 9 0 0 1-9 9"/>
+                          </svg>
+                          <span class="text-xs font-mono text-gray-600 dark:text-gray-400 truncate flex-1" x-text="wt.branch"></span>
+                          <!-- open button -->
+                          <button
+                            @click="openWorktree(wt)"
+                            class="shrink-0 flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-lerd-red dark:hover:text-lerd-red border border-gray-200 dark:border-lerd-border hover:border-lerd-red/40 rounded px-1.5 py-0.5 transition-colors"
+                            :title="wt.domain"
+                          >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            <span class="font-mono" x-text="wt.domain"></span>
+                          </button>
                         </div>
                       </template>
                     </div>
                   </div>
                 </template>
 
-                <!-- PHP-FPM logs -->
-                <div class="px-5 py-4">
-                  <div class="flex items-center gap-2 mb-3">
-                    <span class="text-xs font-medium text-gray-500">PHP-FPM Logs</span>
-                    <span class="flex items-center gap-1 text-[10px]"
+                <!-- Logs (PHP-FPM + Queue tabs) -->
+                <div class="px-3 sm:px-5 py-4">
+                  <!-- Tab bar -->
+                  <div class="flex items-center gap-0 border-b border-gray-100 dark:border-lerd-border mb-3">
+                    <button
+                      @click="setSiteLogsTab('fpm')"
+                      class="pb-2 mr-5 text-xs font-medium transition-colors border-b-2"
+                      :class="siteLogsTab === 'fpm' ? 'border-lerd-red text-lerd-red' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                    >PHP-FPM</button>
+                    <template x-if="selectedSite && selectedSite.queue_running">
+                      <button
+                        @click="setSiteLogsTab('queue')"
+                        class="pb-2 mr-5 text-xs font-medium transition-colors border-b-2"
+                        :class="siteLogsTab === 'queue' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                      >Queue</button>
+                    </template>
+                    <template x-if="selectedSite && selectedSite.stripe_running">
+                      <button
+                        @click="setSiteLogsTab('stripe')"
+                        class="pb-2 text-xs font-medium transition-colors border-b-2"
+                        :class="siteLogsTab === 'stripe' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                      >Stripe</button>
+                    </template>
+                  </div>
+
+                  <!-- PHP-FPM log content -->
+                  <div x-show="siteLogsTab === 'fpm'">
+                    <div class="flex items-center gap-1 text-[10px] mb-2"
                       :class="siteLogs.connected ? 'text-emerald-600 dark:text-emerald-500' : 'text-gray-400 dark:text-gray-600'">
                       <span class="w-1.5 h-1.5 rounded-full"
                         :class="siteLogs.connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'"></span>
                       <span x-text="siteLogs.connected ? 'live' : 'connecting...'"></span>
-                    </span>
+                    </div>
+                    <div
+                      x-ref="siteLogScroll"
+                      class="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-lerd-bg border border-gray-200 dark:border-lerd-border px-4 py-3 font-mono text-[11px] leading-relaxed space-y-0.5"
+                    >
+                      <template x-if="siteLogs.lines.length === 0">
+                        <div class="text-gray-400 dark:text-gray-700 italic">Waiting for log output...</div>
+                      </template>
+                      <template x-for="(line, i) in siteLogs.lines" :key="i">
+                        <div
+                          class="whitespace-pre-wrap break-all"
+                          :class="{
+                            'text-red-500':    line.includes('ERROR') || line.includes('Error') || line.includes('PHP Fatal') || line.includes('PHP Warning'),
+                            'text-yellow-600 dark:text-yellow-400': line.includes('WARNING') || line.includes('Warning') || line.includes('PHP Notice'),
+                            'text-gray-600 dark:text-gray-400':   !line.includes('ERROR') && !line.includes('Error') && !line.includes('WARNING') && !line.includes('Warning')
+                          }"
+                          x-text="line"
+                        ></div>
+                      </template>
+                    </div>
                   </div>
-                  <div
-                    x-ref="siteLogScroll"
-                    class="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-lerd-bg border border-gray-200 dark:border-lerd-border px-4 py-3 font-mono text-[11px] leading-relaxed space-y-0.5"
-                  >
-                    <template x-if="siteLogs.lines.length === 0">
-                      <div class="text-gray-400 dark:text-gray-700 italic">Waiting for log output...</div>
-                    </template>
-                    <template x-for="(line, i) in siteLogs.lines" :key="i">
-                      <div
-                        class="whitespace-pre-wrap break-all"
-                        :class="{
-                          'text-red-500':    line.includes('ERROR') || line.includes('Error') || line.includes('PHP Fatal') || line.includes('PHP Warning'),
-                          'text-yellow-600 dark:text-yellow-400': line.includes('WARNING') || line.includes('Warning') || line.includes('PHP Notice'),
-                          'text-gray-600 dark:text-gray-400':   !line.includes('ERROR') && !line.includes('Error') && !line.includes('WARNING') && !line.includes('Warning')
-                        }"
-                        x-text="line"
-                      ></div>
-                    </template>
+
+                  <!-- Queue log content -->
+                  <div x-show="siteLogsTab === 'queue'">
+                    <div class="flex items-center gap-1 text-[10px] mb-2"
+                      :class="siteQueueLogs.connected ? 'text-emerald-600 dark:text-emerald-500' : 'text-gray-400 dark:text-gray-600'">
+                      <span class="w-1.5 h-1.5 rounded-full"
+                        :class="siteQueueLogs.connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'"></span>
+                      <span x-text="siteQueueLogs.connected ? 'live' : 'connecting...'"></span>
+                    </div>
+                    <div
+                      x-ref="siteQueueLogScroll"
+                      class="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-lerd-bg border border-gray-200 dark:border-lerd-border px-4 py-3 font-mono text-[11px] leading-relaxed space-y-0.5"
+                    >
+                      <template x-if="siteQueueLogs.lines.length === 0">
+                        <div class="text-gray-400 dark:text-gray-700 italic">Waiting for log output...</div>
+                      </template>
+                      <template x-for="(line, i) in siteQueueLogs.lines" :key="i">
+                        <div class="whitespace-pre-wrap break-all text-gray-600 dark:text-gray-400" x-text="line"></div>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Stripe log content -->
+                  <div x-show="siteLogsTab === 'stripe'">
+                    <div class="flex items-center gap-1 text-[10px] mb-2"
+                      :class="siteStripeLogs.connected ? 'text-violet-600 dark:text-violet-500' : 'text-gray-400 dark:text-gray-600'">
+                      <span class="w-1.5 h-1.5 rounded-full"
+                        :class="siteStripeLogs.connected ? 'bg-violet-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'"></span>
+                      <span x-text="siteStripeLogs.connected ? 'live' : 'connecting...'"></span>
+                    </div>
+                    <div
+                      x-ref="siteStripeLogScroll"
+                      class="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-lerd-bg border border-gray-200 dark:border-lerd-border px-4 py-3 font-mono text-[11px] leading-relaxed space-y-0.5"
+                    >
+                      <template x-if="siteStripeLogs.lines.length === 0">
+                        <div class="text-gray-400 dark:text-gray-700 italic">Waiting for log output...</div>
+                      </template>
+                      <template x-for="(line, i) in siteStripeLogs.lines" :key="i">
+                        <div class="whitespace-pre-wrap break-all text-gray-600 dark:text-gray-400" x-text="line"></div>
+                      </template>
+                    </div>
                   </div>
                 </div>
 
@@ -400,10 +534,26 @@
       </template>
 
       <template x-if="!servicesLoading">
-        <div class="flex flex-col sm:flex-row gap-4 items-start">
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
 
-          <!-- Service list -->
-          <div class="w-full sm:w-56 shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
+          <!-- Mobile: horizontal service picker -->
+          <div class="sm:hidden w-full flex overflow-x-auto gap-2 pb-2 -mx-3 px-3">
+            <template x-for="svc in services" :key="'pill-'+svc.name">
+              <button
+                @click="selectService(svc)"
+                class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors"
+                :class="selectedSvc === svc.name
+                  ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red'
+                  : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'"
+              >
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="svc.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"></span>
+                <span x-text="svc.queue_site ? svc.queue_site + ' queue' : svc.stripe_listener_site ? svc.stripe_listener_site + ' stripe' : capitalize(svc.name)"></span>
+              </button>
+            </template>
+          </div>
+
+          <!-- Service list (desktop only) -->
+          <div class="hidden sm:block sm:w-56 sm:shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
             <template x-for="svc in services" :key="svc.name">
               <button
                 @click="selectService(svc)"
@@ -417,13 +567,18 @@
                   :class="svc.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"
                 ></span>
                 <span class="font-medium truncate flex-1"
-                  x-text="svc.queue_site ? svc.queue_site : capitalize(svc.name)"></span>
+                  x-text="svc.queue_site ? svc.queue_site : svc.stripe_listener_site ? svc.stripe_listener_site : capitalize(svc.name)"></span>
                 <template x-if="svc.queue_site">
                   <span class="text-[10px] font-medium shrink-0 px-1 py-0.5 rounded"
                     :class="selectedSvc === svc.name ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'"
                   >queue</span>
                 </template>
-                <template x-if="!svc.queue_site && svc.site_count > 0">
+                <template x-if="svc.stripe_listener_site">
+                  <span class="text-[10px] font-medium shrink-0 px-1 py-0.5 rounded"
+                    :class="selectedSvc === svc.name ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'"
+                  >stripe</span>
+                </template>
+                <template x-if="!svc.queue_site && !svc.stripe_listener_site && svc.site_count > 0">
                   <span class="text-[10px] font-medium tabular-nums shrink-0"
                     :class="selectedSvc === svc.name ? 'text-lerd-red/70' : 'text-gray-400 dark:text-gray-600'"
                     x-text="svc.site_count"
@@ -448,12 +603,12 @@
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
 
                 <!-- Header -->
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <div class="flex items-center gap-3">
                     <div>
                       <div class="flex items-center gap-2">
                         <span class="font-semibold text-gray-900 dark:text-white text-base"
-                          x-text="selectedService.queue_site ? 'Queue worker' : capitalize(selectedService.name)"></span>
+                          x-text="selectedService.queue_site ? 'Queue worker' : selectedService.stripe_listener_site ? 'Stripe listener' : capitalize(selectedService.name)"></span>
                         <span
                           class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
                           :class="selectedService.status === 'active'
@@ -467,14 +622,17 @@
                       <template x-if="selectedService.queue_site">
                         <div class="text-xs text-gray-400 mt-0.5" x-text="selectedService.queue_site + '.test'"></div>
                       </template>
-                      <template x-if="!selectedService.queue_site && selectedService.site_count > 0">
+                      <template x-if="selectedService.stripe_listener_site">
+                        <div class="text-xs text-gray-400 mt-0.5" x-text="selectedService.stripe_listener_site + '.test'"></div>
+                      </template>
+                      <template x-if="!selectedService.queue_site && !selectedService.stripe_listener_site && selectedService.site_count > 0">
                         <div class="text-xs text-gray-400 mt-0.5" x-text="selectedService.site_count + (selectedService.site_count === 1 ? ' site' : ' sites')"></div>
                       </template>
                     </div>
                   </div>
                   <div class="flex items-center gap-2">
-                    <!-- Start button (not for queue workers) -->
-                    <template x-if="!selectedService.queue_site && selectedService.status !== 'active'">
+                    <!-- Start button (not for queue/stripe workers) -->
+                    <template x-if="!selectedService.queue_site && !selectedService.stripe_listener_site && selectedService.status !== 'active'">
                       <button
                         @click="toggleService(selectedService, 'start')"
                         :disabled="selectedService.loading"
@@ -535,7 +693,7 @@
                 </template>
 
                 <!-- Tab bar -->
-                <div class="flex gap-0 border-b border-gray-100 dark:border-lerd-border mt-4 px-5">
+                <div class="flex gap-0 border-b border-gray-100 dark:border-lerd-border mt-4 px-3 sm:px-5">
                   <button
                     @click="svcDetailTab = 'logs'"
                     class="pb-2 mr-5 text-sm font-medium transition-colors border-b-2"
@@ -555,7 +713,7 @@
                 </div>
 
                 <!-- Logs tab -->
-                <div x-show="svcDetailTab === 'logs'" class="p-5">
+                <div x-show="svcDetailTab === 'logs'" class="p-3 sm:p-5">
                   <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2.5">
                       <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Logs</span>
@@ -594,7 +752,7 @@
                 </div>
 
                 <!-- .env tab -->
-                <div x-show="svcDetailTab === 'env'" class="p-5">
+                <div x-show="svcDetailTab === 'env'" class="p-3 sm:p-5">
                   <div class="rounded-lg border border-gray-200 dark:border-lerd-border overflow-hidden">
                     <div class="flex items-center justify-between bg-gray-50 dark:bg-white/[0.03] px-3 py-1.5 border-b border-gray-200 dark:border-lerd-border">
                       <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">.env</span>
@@ -633,10 +791,38 @@
       </template>
 
       <template x-if="!statusLoading">
-        <div class="flex flex-col sm:flex-row gap-4 items-start">
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
 
-          <!-- System items list -->
-          <div class="w-full sm:w-56 shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
+          <!-- Mobile: horizontal system picker -->
+          <div class="sm:hidden w-full flex overflow-x-auto gap-2 pb-2 -mx-3 px-3">
+            <button @click="selectSystem('dns')" class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'dns' ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="systemStatus.dns && systemStatus.dns.ok ? 'bg-emerald-500' : 'bg-red-500'"></span>DNS
+            </button>
+            <button @click="selectSystem('nginx')" class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'nginx' ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="systemStatus.nginx && systemStatus.nginx.running ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"></span>Nginx
+            </button>
+            <template x-for="v in phpVersions" :key="'php-pill-'+v">
+              <button @click="selectSystem('php-' + v)" class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'php-' + v ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="fpmRunning(v) ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"></span>
+                <span x-text="'PHP ' + v"></span>
+              </button>
+            </template>
+            <template x-for="v in nodeVersions" :key="'node-pill-'+v">
+              <button @click="selectSystem('node-' + v)" class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'node-' + v ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400 dark:bg-gray-600"></span>
+                <span x-text="'Node ' + v"></span>
+              </button>
+            </template>
+            <button @click="selectSystem('node-install')" class="flex-none flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'node-install' ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+              <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>Node
+            </button>
+            <button @click="selectSystem('autostart')" class="flex-none flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-colors" :class="selectedSystem === 'autostart' ? 'bg-lerd-red/10 border-lerd-red/30 text-lerd-red' : 'bg-white dark:bg-lerd-card border-gray-200 dark:border-lerd-border text-gray-600 dark:text-gray-400'">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="autostartEnabled ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'"></span>Autostart
+            </button>
+          </div>
+
+          <!-- System items list (desktop only) -->
+          <div class="hidden sm:block sm:w-56 sm:shrink-0 bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
 
             <!-- DNS -->
             <button
@@ -743,7 +929,7 @@
             <!-- DNS -->
             <template x-if="selectedSystem === 'dns'">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <span class="font-semibold text-gray-900 dark:text-white text-base">DNS</span>
                   <template x-if="systemStatus.dns && systemStatus.dns.ok">
                     <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-500 px-2.5 py-1 rounded-full">
@@ -756,7 +942,7 @@
                     </span>
                   </template>
                 </div>
-                <div class="px-5 py-4 space-y-4">
+                <div class="px-3 sm:px-5 py-4 space-y-4">
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-500">TLD</span>
                     <code class="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-lerd-border px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-400 text-xs" x-text="'.' + (systemStatus.dns ? systemStatus.dns.tld : 'test')"></code>
@@ -798,7 +984,7 @@
             <!-- Nginx -->
             <template x-if="selectedSystem === 'nginx'">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <span class="font-semibold text-gray-900 dark:text-white text-base">Nginx</span>
                   <template x-if="systemStatus.nginx && systemStatus.nginx.running">
                     <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-500 px-2.5 py-1 rounded-full">
@@ -811,7 +997,7 @@
                     </span>
                   </template>
                 </div>
-                <div class="px-5 py-4 space-y-4">
+                <div class="px-3 sm:px-5 py-4 space-y-4">
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-500">Container</span>
                     <code class="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-lerd-border px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-400 text-xs">lerd-nginx</code>
@@ -855,7 +1041,7 @@
             <!-- PHP version detail -->
             <template x-if="selectedPHPVersion">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <div class="flex items-center gap-3">
                     <span class="font-semibold text-gray-900 dark:text-white text-base" x-text="'PHP ' + selectedPHPVersion"></span>
                     <template x-if="fpmRunning(selectedPHPVersion)">
@@ -895,7 +1081,7 @@
                     </template>
                   </div>
                 </div>
-                <div class="px-5 py-4 space-y-5">
+                <div class="px-3 sm:px-5 py-4 space-y-5">
                   <!-- Xdebug -->
                   <div class="flex items-center justify-between">
                     <div>
@@ -992,7 +1178,7 @@
             <!-- Node version detail -->
             <template x-if="selectedNodeVersion">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <div class="flex items-center gap-3">
                     <span class="font-semibold text-gray-900 dark:text-white text-base" x-text="'Node ' + selectedNodeVersion"></span>
                     <template x-if="nodeSiteCount(selectedNodeVersion) > 0">
@@ -1022,7 +1208,7 @@
                     </template>
                   </div>
                 </div>
-                <div class="px-5 py-4 space-y-4">
+                <div class="px-3 sm:px-5 py-4 space-y-4">
                   <!-- Sites -->
                   <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sites</p>
@@ -1053,10 +1239,10 @@
             <!-- Node install -->
             <template x-if="selectedSystem === 'node-install'">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <span class="font-semibold text-gray-900 dark:text-white text-base">Install Node.js version</span>
                 </div>
-                <div class="px-5 py-4 space-y-4">
+                <div class="px-3 sm:px-5 py-4 space-y-4">
                   <p class="text-sm text-gray-500">Install a new Node.js version using fnm.</p>
                   <div class="flex items-center gap-2">
                     <input
@@ -1088,7 +1274,7 @@
             <!-- Autostart -->
             <template x-if="selectedSystem === 'autostart'">
               <div class="bg-white dark:bg-lerd-card rounded-xl border border-gray-200 dark:border-lerd-border overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-lerd-border">
                   <span class="font-semibold text-gray-900 dark:text-white text-base">Autostart</span>
                   <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
                     :class="autostartEnabled ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-500' : 'bg-gray-100 dark:bg-white/5 text-gray-500'"
@@ -1097,7 +1283,7 @@
                     <span x-text="autostartEnabled ? 'Enabled' : 'Disabled'"></span>
                   </span>
                 </div>
-                <div class="px-5 py-4">
+                <div class="px-3 sm:px-5 py-4">
                   <div class="flex items-center justify-between gap-4">
                     <div>
                       <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Start on login</p>
@@ -1236,6 +1422,17 @@ function lerdApp() {
       connected: false,
       _source: null,
     },
+    siteQueueLogs: {
+      lines: [],
+      connected: false,
+      _source: null,
+    },
+    siteStripeLogs: {
+      lines: [],
+      connected: false,
+      _source: null,
+    },
+    siteLogsTab: 'fpm',
 
     applyTheme(t) {
       const isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1308,7 +1505,7 @@ function lerdApp() {
         const raw = await res.json();
         this._sitesLoaded = true;
         if (firstLoad) {
-          this.sites = raw.map(s => ({ ...s, tlsLoading: false, tlsError: '', versionLoading: false, queueLoading: false, queueError: '', unlinkLoading: false }));
+          this.sites = raw.map(s => ({ ...s, tlsLoading: false, tlsError: '', versionLoading: false, queueLoading: false, queueError: '', stripeLoading: false, stripeError: '', unlinkLoading: false }));
         } else {
           raw.forEach(s => {
             const e = this.sites.find(x => x.domain === s.domain);
@@ -1318,8 +1515,10 @@ function lerdApp() {
               e.tls = s.tls;
               e.fpm_running = s.fpm_running;
               e.queue_running = s.queue_running;
+              e.stripe_running = s.stripe_running;
+              e.stripe_secret_set = s.stripe_secret_set;
             } else {
-              this.sites.push({ ...s, tlsLoading: false, tlsError: '', versionLoading: false, queueLoading: false, queueError: '', unlinkLoading: false });
+              this.sites.push({ ...s, tlsLoading: false, tlsError: '', versionLoading: false, queueLoading: false, queueError: '', stripeLoading: false, stripeError: '', unlinkLoading: false });
             }
           });
           this.sites = this.sites.filter(e => raw.some(s => s.domain === e.domain));
@@ -1333,6 +1532,9 @@ function lerdApp() {
 
     selectSite(site) {
       this.selectedSiteDomain = site.domain;
+      this.siteLogsTab = 'fpm';
+      this.closeSiteQueueLogs();
+      this.closeSiteStripeLogs();
       this.openSiteLogs(site);
     },
 
@@ -1357,6 +1559,92 @@ function lerdApp() {
           if (el) el.scrollTop = el.scrollHeight;
         });
       };
+    },
+
+    openSiteQueueLogs(site) {
+      this.closeSiteQueueLogs();
+      this.siteQueueLogs.lines = [];
+      const src = new EventSource(`/api/queue/${site.name}/logs`);
+      this.siteQueueLogs._source = src;
+      src.onopen = () => { this.siteQueueLogs.connected = true; };
+      src.onerror = () => { this.siteQueueLogs.connected = false; };
+      src.onmessage = (e) => {
+        this.siteQueueLogs.lines.push(e.data);
+        if (this.siteQueueLogs.lines.length > 500) this.siteQueueLogs.lines.splice(0, this.siteQueueLogs.lines.length - 500);
+        this.$nextTick(() => {
+          const el = this.$refs.siteQueueLogScroll;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      };
+    },
+
+    closeSiteQueueLogs() {
+      if (this.siteQueueLogs._source) { this.siteQueueLogs._source.close(); this.siteQueueLogs._source = null; }
+      this.siteQueueLogs.connected = false;
+    },
+
+    openSiteStripeLogs(site) {
+      this.closeSiteStripeLogs();
+      this.siteStripeLogs.lines = [];
+      const src = new EventSource(`/api/stripe/${site.name}/logs`);
+      this.siteStripeLogs._source = src;
+      src.onopen = () => { this.siteStripeLogs.connected = true; };
+      src.onerror = () => { this.siteStripeLogs.connected = false; };
+      src.onmessage = (e) => {
+        this.siteStripeLogs.lines.push(e.data);
+        if (this.siteStripeLogs.lines.length > 500) this.siteStripeLogs.lines.splice(0, this.siteStripeLogs.lines.length - 500);
+        this.$nextTick(() => {
+          const el = this.$refs.siteStripeLogScroll;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      };
+    },
+
+    closeSiteStripeLogs() {
+      if (this.siteStripeLogs._source) { this.siteStripeLogs._source.close(); this.siteStripeLogs._source = null; }
+      this.siteStripeLogs.connected = false;
+    },
+
+    async toggleStripe(site) {
+      site.stripeLoading = true;
+      site.stripeError = '';
+      const stopping = site.stripe_running;
+      const action = stopping ? 'stripe:stop' : 'stripe:start';
+      try {
+        const res = await fetch(`/api/sites/${site.domain}/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          site.stripe_running = !stopping;
+          if (stopping) {
+            this.closeSiteStripeLogs();
+            if (this.siteLogsTab === 'stripe') this.siteLogsTab = 'fpm';
+          } else {
+            this.siteLogsTab = 'stripe';
+            this.openSiteStripeLogs(site);
+          }
+          await this.loadServices();
+        } else {
+          site.stripeError = data.error || 'Failed';
+        }
+      } catch (e) {
+        site.stripeError = e.message || 'Request failed';
+      } finally {
+        site.stripeLoading = false;
+      }
+    },
+
+    setSiteLogsTab(tab) {
+      this.siteLogsTab = tab;
+      if (tab === 'queue' && this.selectedSite) {
+        this.openSiteQueueLogs(this.selectedSite);
+        this.closeSiteStripeLogs();
+      } else if (tab === 'stripe' && this.selectedSite) {
+        this.openSiteStripeLogs(this.selectedSite);
+        this.closeSiteQueueLogs();
+      } else {
+        this.closeSiteQueueLogs();
+        this.closeSiteStripeLogs();
+      }
     },
 
     async loadServices() {
@@ -1387,7 +1675,9 @@ function lerdApp() {
       this.svcLogs.connected = false;
       const url = svc.queue_site
         ? `/api/queue/${svc.queue_site}/logs`
-        : `/api/logs/lerd-${svc.name}`;
+        : svc.stripe_listener_site
+          ? `/api/stripe/${svc.stripe_listener_site}/logs`
+          : `/api/logs/lerd-${svc.name}`;
       const src = new EventSource(url);
       this.svcLogs._source = src;
       src.onopen = () => { this.svcLogs.connected = true; };
@@ -1626,12 +1916,28 @@ function lerdApp() {
     async toggleQueue(site) {
       site.queueLoading = true;
       site.queueError = '';
-      const action = site.queue_running ? 'queue:stop' : 'queue:start';
+      const stopping = site.queue_running;
+      const action = stopping ? 'queue:stop' : 'queue:start';
       try {
         const res = await fetch(`/api/sites/${site.domain}/${action}`, { method: 'POST' });
         const data = await res.json();
         if (data.ok) {
-          site.queue_running = !site.queue_running;
+          site.queue_running = !stopping;
+          if (stopping) {
+            // Close stale log drawer stream if open for this queue
+            if (this.logs.open && this.logs.container === `queue:${site.name}`) {
+              this.closeLogs();
+            }
+            // Close site queue logs panel and return to FPM tab
+            this.closeSiteQueueLogs();
+            this.siteLogsTab = 'fpm';
+          } else {
+            // Queue just started — switch to Queue tab and begin streaming
+            this.siteLogsTab = 'queue';
+            this.openSiteQueueLogs(site);
+          }
+          // Refresh services list so queue worker appears/disappears
+          await this.loadServices();
         } else {
           site.queueError = data.error || 'Failed';
         }
@@ -1652,6 +1958,9 @@ function lerdApp() {
           if (this.selectedSiteDomain === site.domain) {
             this.selectedSiteDomain = null;
             if (this.siteLogs._source) { this.siteLogs._source.close(); this.siteLogs._source = null; }
+            this.closeSiteQueueLogs();
+            this.closeSiteStripeLogs();
+            this.siteLogsTab = 'fpm';
           }
           this.sites = this.sites.filter(s => s.domain !== site.domain);
         } else {

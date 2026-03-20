@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/geodro/lerd/internal/config"
+	"github.com/geodro/lerd/internal/envfile"
 	phpDet "github.com/geodro/lerd/internal/php"
 	lerdSystemd "github.com/geodro/lerd/internal/systemd"
 	"github.com/geodro/lerd/internal/podman"
@@ -106,6 +107,16 @@ func runQueueStop() error {
 }
 
 func queueStartExplicit(siteName, sitePath, phpVersion, queue string, tries, timeout int) error {
+	// Pre-flight: if the site uses Redis as its queue connection, make sure
+	// lerd-redis is actually running. Without it the queue worker fails immediately
+	// with a cryptic PHP "getaddrinfo for lerd-redis failed" DNS error.
+	envPath := filepath.Join(sitePath, ".env")
+	if envfile.ReadKey(envPath, "QUEUE_CONNECTION") == "redis" {
+		if running, _ := podman.ContainerRunning("lerd-redis"); !running {
+			return fmt.Errorf("queue worker requires Redis (QUEUE_CONNECTION=redis in .env) but lerd-redis is not running\nStart it first: lerd services start redis")
+		}
+	}
+
 	versionShort := strings.ReplaceAll(phpVersion, ".", "")
 	fpmUnit := "lerd-php" + versionShort + "-fpm"
 	container := "lerd-php" + versionShort + "-fpm"

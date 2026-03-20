@@ -148,6 +148,12 @@ When `lerd env` runs in a project directory, it checks each custom service's `en
 
 `lerd start` and `lerd stop` include any custom service that has a quadlet file installed (i.e. has been started at least once via `lerd service start`). They are started and stopped alongside the built-in services.
 
+### Manually stopped services
+
+If you stop a service with `lerd service stop` (or via the web UI), lerd records it as **manually paused**. `lerd start` and autostart on login will skip it — the service stays stopped until you explicitly start it again.
+
+`lerd stop` + `lerd start` restores the previous state: services that were running before `lerd stop` start again; services you had manually stopped remain stopped.
+
 ### `lerd service list` output
 
 Custom services appear after built-in services with a `[custom]` type marker:

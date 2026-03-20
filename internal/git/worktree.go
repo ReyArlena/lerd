@@ -16,6 +16,24 @@ type Worktree struct {
 	Domain string // "<sanitized-branch>.<siteDomain>"
 }
 
+// MainBranch returns the current branch of the main repo checkout at sitePath,
+// or an empty string if it cannot be determined.
+func MainBranch(sitePath string) string {
+	data, err := os.ReadFile(filepath.Join(sitePath, ".git", "HEAD"))
+	if err != nil {
+		return ""
+	}
+	line := strings.TrimSpace(string(data))
+	const prefix = "ref: refs/heads/"
+	if strings.HasPrefix(line, prefix) {
+		return strings.TrimPrefix(line, prefix)
+	}
+	if len(line) >= 7 {
+		return "detached-" + line[:7]
+	}
+	return ""
+}
+
 // IsMainRepo returns true if sitePath/.git is a directory (not a file).
 // A file means the repo itself is a worktree, not the main checkout.
 func IsMainRepo(sitePath string) bool {

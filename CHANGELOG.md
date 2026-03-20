@@ -7,7 +7,7 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.6.0] — 2026-03-21
 
 ### Added
 
@@ -18,15 +18,18 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `lerd sites` shows worktrees indented under their parent site.
   - The web UI shows worktrees in the site detail panel with clickable domain links and an open-in-browser button.
   - A git-branch icon appears on the site button in the sidebar whenever the site has active worktrees.
-
 - **HTTPS for worktrees** — when a site is secured with `lerd secure`, all its worktrees automatically receive an SSL vhost that reuses the parent site's wildcard mkcert certificate (`*.domain.test`). No separate certificate is needed per worktree. Securing and unsecuring a site also updates `APP_URL` in each worktree's `.env`.
-
 - **Catch-all default vhost** (`_default.conf`) — any `.test` hostname that does not match a registered site returns HTTP 444 / rejects the TLS handshake, instead of falling through to the first alphabetical vhost.
+- **`stripe:listen` as a background service** — `lerd stripe:listen` now runs the Stripe CLI in a persistent systemd user service (`lerd-stripe-<site>.service`) rather than a foreground process. It survives terminal sessions and restarts on failure. `lerd stripe:listen stop` tears it down.
+- **Service pause state** — `lerd service stop` now records the service as manually paused. `lerd start` and autostart on login skip paused services. `lerd stop` + `lerd start` restore the previous state: running services restart, manually stopped services stay stopped.
+- **Queue worker Redis pre-flight** — `lerd queue:start` checks that `lerd-redis` is running when `QUEUE_CONNECTION=redis` is set in `.env`, and returns a friendly error with instructions rather than failing with a cryptic DNS error from PHP.
 
 ### Fixed
 
 - **Park watcher depth** — the filesystem watcher no longer registers projects found in subdirectories of parked directories. Only direct children of a parked directory are eligible for auto-registration.
 - **Nginx reload ordering for secure/unsecure** — `lerd secure` / `lerd unsecure` (and their UI/MCP equivalents) now save the updated `secured` flag to `sites.yaml` *before* reloading nginx. Previously a failed nginx reload would leave `sites.yaml` with a stale `secured` state, causing the watcher to regenerate the wrong vhost type on restart.
+- **Tray always restarts on `lerd start`** — any existing tray process is killed before relaunching, preventing duplicate tray instances after repeated `lerd start` calls.
+- **FPM quadlet skip-write optimisation** — `WriteFPMQuadlet` skips writing and daemon-reloading when the quadlet content is unchanged. Unnecessary daemon-reloads caused Podman's quadlet generator to regenerate all service files, which could briefly disrupt `lerd-dns` and cause `.test` resolution failures.
 
 ---
 
@@ -912,6 +915,7 @@ Initial release.
 
 ---
 
+[0.6.0]: https://github.com/geodro/lerd/compare/v0.5.16...v0.6.0
 [0.5.3]: https://github.com/geodro/lerd/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/geodro/lerd/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/geodro/lerd/compare/v0.5.0...v0.5.1

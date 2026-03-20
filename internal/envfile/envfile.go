@@ -51,6 +51,28 @@ func ApplyUpdates(path string, updates map[string]string) error {
 	return os.WriteFile(path, []byte(out), 0644)
 }
 
+// ReadKey returns the value of a single key from the .env file at path,
+// or an empty string if the key is absent or the file cannot be read.
+func ReadKey(path, key string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if ok && strings.TrimSpace(k) == key {
+			return strings.Trim(strings.TrimSpace(v), `"'`)
+		}
+	}
+	return ""
+}
+
 // UpdateAppURL sets APP_URL in the project's .env to scheme://domain.
 // Silently does nothing if no .env exists.
 func UpdateAppURL(projectPath, scheme, domain string) error {

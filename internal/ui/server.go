@@ -121,6 +121,7 @@ func Start(currentVersion string) error {
 	mux.HandleFunc("/api/sites/", withCORS(handleSiteAction))
 	mux.HandleFunc("/api/logs/", withCORS(handleLogs))
 	mux.HandleFunc("/api/queue/", withCORS(handleQueueLogs))
+	mux.HandleFunc("/api/stripe/", withCORS(handleStripeLogs))
 	mux.HandleFunc("/api/settings", withCORS(handleSettings))
 	mux.HandleFunc("/api/settings/autostart", withCORS(handleSettingsAutostart))
 	mux.HandleFunc("/api/xdebug/", withCORS(handleXdebugAction))
@@ -225,8 +226,11 @@ type SiteResponse struct {
 	NodeVersion  string             `json:"node_version"`
 	TLS          bool               `json:"tls"`
 	FPMRunning   bool               `json:"fpm_running"`
-	QueueRunning bool               `json:"queue_running"`
-	Worktrees    []WorktreeResponse `json:"worktrees"`
+	QueueRunning    bool               `json:"queue_running"`
+	StripeRunning   bool               `json:"stripe_running"`
+	StripeSecretSet bool               `json:"stripe_secret_set"`
+	Branch          string             `json:"branch"`
+	Worktrees       []WorktreeResponse `json:"worktrees"`
 }
 
 func handleSites(w http.ResponseWriter, _ *http.Request) {
@@ -270,8 +274,11 @@ func handleSites(w http.ResponseWriter, _ *http.Request) {
 			fpmRunning, _ = podman.ContainerRunning("lerd-php" + short + "-fpm")
 		}
 		queueStatus, _ := podman.UnitStatus("lerd-queue-" + s.Name)
+		stripeStatus, _ := podman.UnitStatus("lerd-stripe-" + s.Name)
+		stripeSecretSet := cli.StripeSecretSet(s.Path)
 
 		worktreeResponses := []WorktreeResponse{}
+		mainBranch := ""
 		if wts, err := gitpkg.DetectWorktrees(s.Path, s.Domain); err == nil {
 			for _, wt := range wts {
 				worktreeResponses = append(worktreeResponses, WorktreeResponse{
@@ -279,6 +286,9 @@ func handleSites(w http.ResponseWriter, _ *http.Request) {
 					Domain: wt.Domain,
 					Path:   wt.Path,
 				})
+			}
+			if len(worktreeResponses) > 0 {
+				mainBranch = gitpkg.MainBranch(s.Path)
 			}
 		}
 
@@ -290,7 +300,10 @@ func handleSites(w http.ResponseWriter, _ *http.Request) {
 			NodeVersion:  nodeVersion,
 			TLS:          s.Secured,
 			FPMRunning:   fpmRunning,
-			QueueRunning: queueStatus == "active",
+			QueueRunning:    queueStatus == "active",
+			StripeRunning:   stripeStatus == "active",
+			StripeSecretSet: stripeSecretSet,
+			Branch:          mainBranch,
 			Worktrees:    worktreeResponses,
 		})
 	}
@@ -302,13 +315,14 @@ func handleSites(w http.ResponseWriter, _ *http.Request) {
 
 // ServiceResponse is the response for GET /api/services.
 type ServiceResponse struct {
-	Name      string            `json:"name"`
-	Status    string            `json:"status"`
-	EnvVars   map[string]string `json:"env_vars"`
-	Dashboard string            `json:"dashboard,omitempty"`
-	Custom    bool              `json:"custom,omitempty"`
-	SiteCount int               `json:"site_count"`
-	QueueSite string            `json:"queue_site,omitempty"`
+	Name             string            `json:"name"`
+	Status           string            `json:"status"`
+	EnvVars          map[string]string `json:"env_vars"`
+	Dashboard        string            `json:"dashboard,omitempty"`
+	Custom           bool              `json:"custom,omitempty"`
+	SiteCount        int               `json:"site_count"`
+	QueueSite        string            `json:"queue_site,omitempty"`
+	StripeListenerSite string          `json:"stripe_listener_site,omitempty"`
 }
 
 // builtinDashboards maps built-in service names to their dashboard URLs.
@@ -344,20 +358,38 @@ func buildServiceResponse(name string) ServiceResponse {
 
 // listActiveQueueWorkers returns the site names of active lerd-queue-* systemd units.
 func listActiveQueueWorkers() []string {
+	return listActiveUnitsBySuffix("lerd-queue-*.service", "lerd-queue-")
+}
+
+// listActiveStripeListeners returns the site names of active lerd-stripe-* units
+// that were started by `lerd stripe:listen` (i.e. have a .service file in the
+// systemd user dir, as opposed to quadlet-based services like stripe-mock).
+func listActiveStripeListeners() []string {
+	all := listActiveUnitsBySuffix("lerd-stripe-*.service", "lerd-stripe-")
+	var result []string
+	for _, name := range all {
+		unitFile := filepath.Join(config.SystemdUserDir(), "lerd-stripe-"+name+".service")
+		if _, err := os.Stat(unitFile); err == nil {
+			result = append(result, name)
+		}
+	}
+	return result
+}
+
+func listActiveUnitsBySuffix(pattern, prefix string) []string {
 	out, err := exec.Command("systemctl", "--user", "list-units", "--state=active",
-		"--no-legend", "--plain", "lerd-queue-*.service").Output()
+		"--no-legend", "--plain", pattern).Output()
 	if err != nil {
 		return nil
 	}
 	var sites []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		// line format: "lerd-queue-sitename.service  active running ..."
 		fields := strings.Fields(line)
 		if len(fields) == 0 {
 			continue
 		}
 		unit := strings.TrimSuffix(fields[0], ".service")
-		siteName := strings.TrimPrefix(unit, "lerd-queue-")
+		siteName := strings.TrimPrefix(unit, prefix)
 		if siteName != unit && siteName != "" {
 			sites = append(sites, siteName)
 		}
@@ -402,6 +434,14 @@ func handleServices(w http.ResponseWriter, _ *http.Request) {
 			Status:    "active",
 			EnvVars:   map[string]string{},
 			QueueSite: siteName,
+		})
+	}
+	for _, siteName := range listActiveStripeListeners() {
+		services = append(services, ServiceResponse{
+			Name:               "stripe-" + siteName,
+			Status:             "active",
+			EnvVars:            map[string]string{},
+			StripeListenerSite: siteName,
 		})
 	}
 	writeJSON(w, services)
@@ -503,8 +543,14 @@ func handleServiceAction(w http.ResponseWriter, r *http.Request) {
 			}
 			time.Sleep(time.Duration(attempt+1) * 300 * time.Millisecond)
 		}
+		if opErr == nil {
+			_ = config.SetServicePaused(name, false)
+		}
 	case "stop":
 		opErr = podman.StopUnit(unit)
+		if opErr == nil {
+			_ = config.SetServicePaused(name, true)
+		}
 	case "remove":
 		if isBuiltin {
 			http.Error(w, "cannot remove built-in service", http.StatusForbidden)
@@ -785,6 +831,24 @@ func handleSiteAction(w http.ResponseWriter, r *http.Request) {
 		return
 	case "queue:stop":
 		if err := cli.QueueStopForSite(site.Name); err != nil {
+			writeJSON(w, SiteActionResponse{Error: err.Error()})
+			return
+		}
+		writeJSON(w, SiteActionResponse{OK: true})
+		return
+	case "stripe:start":
+		scheme := "http"
+		if site.Secured {
+			scheme = "https"
+		}
+		if err := cli.StripeStartForSite(site.Name, site.Path, scheme+"://"+site.Domain); err != nil {
+			writeJSON(w, SiteActionResponse{Error: err.Error()})
+			return
+		}
+		writeJSON(w, SiteActionResponse{OK: true})
+		return
+	case "stripe:stop":
+		if err := cli.StripeStopForSite(site.Name); err != nil {
 			writeJSON(w, SiteActionResponse{Error: err.Error()})
 			return
 		}
@@ -1143,3 +1207,47 @@ func handleXdebugAction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "xdebug_enabled": enable})
 }
 
+
+func handleStripeLogs(w http.ResponseWriter, r *http.Request) {
+	// path: /api/stripe/<sitename>/logs
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/stripe/"), "/")
+	if len(parts) != 2 || parts[1] != "logs" || !allowedQueueUnit.MatchString(parts[0]) {
+		http.NotFound(w, r)
+		return
+	}
+	unit := "lerd-stripe-" + parts[0]
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	pr, pw := io.Pipe()
+	cmd := exec.CommandContext(r.Context(), "journalctl", "--user", "-u", unit, "-f", "--no-pager", "-n", "100", "--output=cat")
+	cmd.Stdout = pw
+	cmd.Stderr = pw
+
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(w, "data: error starting logs: %s\n\n", err.Error())
+		flusher.Flush()
+		return
+	}
+
+	go func() {
+		cmd.Wait() //nolint:errcheck
+		pw.Close()
+	}()
+
+	scanner := bufio.NewScanner(pr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Fprintf(w, "data: %s\n\n", line)
+		flusher.Flush()
+	}
+}

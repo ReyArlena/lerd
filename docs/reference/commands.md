@@ -94,6 +94,13 @@
 | `lerd queue:start` | Start a queue worker for the current project |
 | `lerd queue:stop` | Stop the queue worker for the current project |
 
+## Stripe
+
+| Command | Description |
+|---|---|
+| `lerd stripe:listen` | Start a Stripe webhook listener for the current project as a background service |
+| `lerd stripe:listen stop` | Stop the Stripe webhook listener |
+
 ## Shell completion
 
 ```bash

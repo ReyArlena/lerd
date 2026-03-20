@@ -150,6 +150,7 @@ func newServiceStartCmd() *cobra.Command {
 			if err := podman.StartUnit(unit); err != nil {
 				return err
 			}
+			_ = config.SetServicePaused(name, false)
 
 			printEnvVars(name)
 			return nil
@@ -163,9 +164,14 @@ func newServiceStopCmd() *cobra.Command {
 		Short: "Stop a service",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			unit := "lerd-" + args[0]
+			name := args[0]
+			unit := "lerd-" + name
 			fmt.Printf("Stopping %s...\n", unit)
-			return podman.StopUnit(unit)
+			if err := podman.StopUnit(unit); err != nil {
+				return err
+			}
+			_ = config.SetServicePaused(name, true)
+			return nil
 		},
 	}
 }
