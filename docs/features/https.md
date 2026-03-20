@@ -24,9 +24,17 @@ The Sites tab has an HTTPS toggle per site — clicking it runs `lerd secure` or
 
 ---
 
+## Git worktrees
+
+When a site has [git worktrees](git-worktrees.md), securing the parent automatically enables HTTPS for all its worktrees too. Lerd reuses the parent's wildcard certificate (`*.myapp.test`) — no extra `lerd secure` calls needed, and no per-worktree certificate is issued.
+
+Unsecuring the parent switches all worktree vhosts back to HTTP and updates their `.env` files accordingly.
+
+---
+
 ## How it works
 
 1. `lerd install` generates a local CA with mkcert and installs it into the system trust store (NSS databases for Chrome/Firefox, and the system root store).
-2. `lerd secure <site>` issues a certificate signed by that CA for the site's `.test` domain.
+2. `lerd secure <site>` issues a certificate signed by that CA for `<site>.test` **and** `*.<site>.test` (wildcard), so all subdomain worktrees are covered by a single cert.
 3. The nginx vhost is regenerated to listen on port 443 with the new cert, and port 80 redirects to HTTPS (302, not 301, so the redirect is not cached by browsers).
-4. `APP_URL` in the project's `.env` is updated to `https://`.
+4. `APP_URL` in the project's `.env` (and any worktree `.env` files) is updated to `https://`.

@@ -41,6 +41,12 @@ When you unlink a site that lives inside a parked directory, the vhost is remove
 
 ---
 
+## Git worktrees
+
+Lerd automatically creates a subdomain for each `git worktree` checkout. See [Git Worktrees](../features/git-worktrees.md) for details.
+
+---
+
 ## Sharing sites
 
 `lerd share` exposes the current site via a public tunnel. Requires [ngrok](https://ngrok.com/download) or [Expose](https://expose.dev) to be installed.
