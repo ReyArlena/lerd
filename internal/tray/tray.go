@@ -340,7 +340,7 @@ func openUpdateTerminal(latestVer string) {
 func handleQuit(item *systray.MenuItem, cancel context.CancelFunc) {
 	<-item.ClickedCh
 	cancel()
-	_ = exec.Command("lerd", "stop").Run()
+	_ = exec.Command("lerd", "quit").Run()
 	systray.Quit()
 }
 

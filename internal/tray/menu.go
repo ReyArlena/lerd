@@ -75,7 +75,7 @@ func buildMenu() *menuState {
 
 	m.mAutostart = systray.AddMenuItem("Autostart at login: Off", "Toggle lerd autostart on login")
 	m.mUpdate = systray.AddMenuItem("Check for update...", "Check for a newer version of Lerd")
-	m.mQuit = systray.AddMenuItem("Stop Lerd & Quit", "Stop Lerd and quit the tray")
+	m.mQuit = systray.AddMenuItem("Quit Lerd", "Stop all Lerd processes and containers")
 
 	return m
 }

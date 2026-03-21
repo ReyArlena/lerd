@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -44,13 +45,25 @@ func NewStartCmd() *cobra.Command {
 func NewStopCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop",
-		Short: "Stop Lerd (DNS, nginx, PHP-FPM, and running services)",
+		Short: "Stop Lerd containers (DNS, nginx, PHP-FPM, and running services)",
 		RunE:  runStop,
 	}
 }
 
+// NewQuitCmd returns the quit command.
+func NewQuitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "quit",
+		Short: "Stop all Lerd processes and containers (including UI, watcher, and tray)",
+		RunE:  runQuit,
+	}
+}
+
+// coreUnits returns the container units managed by lerd start/stop.
+// Does not include lerd-ui or lerd-watcher — those are process units
+// stopped only by lerd quit.
 func coreUnits() []string {
-	units := []string{"lerd-dns", "lerd-nginx", "lerd-ui"}
+	units := []string{"lerd-dns", "lerd-nginx"}
 	versions, _ := phpPkg.ListInstalled()
 	for _, v := range versions {
 		short := strings.ReplaceAll(v, ".", "")
@@ -60,7 +73,7 @@ func coreUnits() []string {
 }
 
 // installedServiceUnits returns service units that have a quadlet file installed
-// and have not been manually stopped by the user.
+// and have not been manually stopped by the user. Used for lerd start.
 func installedServiceUnits() []string {
 	var units []string
 	for _, svc := range knownServices {
@@ -77,6 +90,24 @@ func installedServiceUnits() []string {
 	return units
 }
 
+// allInstalledServiceUnits returns all service units that have a quadlet file
+// installed, regardless of paused state. Used for lerd stop.
+func allInstalledServiceUnits() []string {
+	var units []string
+	for _, svc := range knownServices {
+		if podman.QuadletInstalled("lerd-" + svc) {
+			units = append(units, "lerd-"+svc)
+		}
+	}
+	customs, _ := config.ListCustomServices()
+	for _, svc := range customs {
+		if podman.QuadletInstalled("lerd-" + svc.Name) {
+			units = append(units, "lerd-"+svc.Name)
+		}
+	}
+	return units
+}
+
 type startResult struct {
 	unit string
 	err  error
@@ -87,6 +118,9 @@ func runStart(_ *cobra.Command, _ []string) error {
 	go ensureFPMImages()
 
 	units := append(coreUnits(), installedServiceUnits()...)
+	units = append(units, "lerd-ui")
+	units = append(units, registeredQueueUnits()...)
+	units = append(units, registeredStripeUnits()...)
 	fmt.Println("Starting Lerd...")
 
 	results := make([]startResult, len(units))
@@ -156,8 +190,41 @@ func killTray() {
 	exec.Command("pkill", "-f", "lerd-tray").Run()
 }
 
+// registeredStripeUnits returns unit names for all lerd-stripe-* service files
+// present in the systemd user dir (i.e. started via `lerd stripe:listen`).
+func registeredStripeUnits() []string {
+	entries, _ := filepath.Glob(filepath.Join(config.SystemdUserDir(), "lerd-stripe-*.service"))
+	units := make([]string, 0, len(entries))
+	for _, e := range entries {
+		units = append(units, strings.TrimSuffix(filepath.Base(e), ".service"))
+	}
+	return units
+}
+
+// registeredQueueUnits returns unit names for all lerd-queue-* service files
+// present in the systemd user dir (i.e. started via `lerd queue:start`).
+func registeredQueueUnits() []string {
+	entries, _ := filepath.Glob(filepath.Join(config.SystemdUserDir(), "lerd-queue-*.service"))
+	units := make([]string, 0, len(entries))
+	for _, e := range entries {
+		units = append(units, strings.TrimSuffix(filepath.Base(e), ".service"))
+	}
+	return units
+}
+
+// RunStart starts all lerd services (exported for use by the UI server).
+func RunStart() error { return runStart(nil, nil) }
+
+// RunStop stops lerd containers (exported for use by the UI server).
+func RunStop() error { return runStop(nil, nil) }
+
+// RunQuit stops all lerd processes and containers (exported for use by the UI server).
+func RunQuit() error { return runQuit(nil, nil) }
+
 func runStop(_ *cobra.Command, _ []string) error {
-	units := append(coreUnits(), installedServiceUnits()...)
+	units := append(coreUnits(), allInstalledServiceUnits()...)
+	units = append(units, registeredQueueUnits()...)
+	units = append(units, registeredStripeUnits()...)
 	fmt.Println("Stopping Lerd...")
 
 	results := make([]startResult, len(units))
@@ -179,5 +246,28 @@ func runStop(_ *cobra.Command, _ []string) error {
 			fmt.Println("OK")
 		}
 	}
+	return nil
+}
+
+func runQuit(_ *cobra.Command, _ []string) error {
+	// Stop containers and services (same as stop).
+	if err := runStop(nil, nil); err != nil {
+		return err
+	}
+
+	// Stop process units.
+	for _, unit := range []string{"lerd-ui", "lerd-watcher"} {
+		fmt.Printf("  --> %s ... ", unit)
+		if err := podman.StopUnit(unit); err != nil {
+			fmt.Printf("WARN (%v)\n", err)
+		} else {
+			fmt.Println("OK")
+		}
+	}
+
+	// Kill the tray.
+	killTray()
+	fmt.Println("  --> lerd-tray ... OK")
+
 	return nil
 }

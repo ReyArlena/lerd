@@ -7,6 +7,25 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-03-21
+
+### Added
+
+- **`lerd quit` command** — fully shuts down Lerd: stops all containers and services (like `lerd stop`), then also stops the `lerd-ui` and `lerd-watcher` process units, and kills the system tray.
+- **Start/Stop from the web UI** — the dashboard now has Start and Stop buttons that call `lerd start` / `lerd stop` via new `/api/lerd/start`, `/api/lerd/stop`, and `/api/lerd/quit` API endpoints. The Start button is only shown when one or more core services (DNS, nginx, PHP-FPM) are not running.
+- **`lerd start` resumes stripe listeners** — `lerd-stripe-*` services are now included in the start sequence alongside queue workers and the UI service.
+
+### Changed
+
+- **Tray quit uses `lerd quit`** — the tray's quit action now calls the new `quit` command instead of `stop`, ensuring a full shutdown including the UI and watcher processes. The menu item is renamed from "Stop Lerd & Quit" to "Quit Lerd".
+- **`lerd stop` stops all services regardless of pause state** — stop now shuts down all installed services including paused ones and stripe listeners, ensuring a clean shutdown every time.
+
+### Fixed
+
+- **Log panel guards** — clicking to open logs for FPM, nginx, DNS, or queue services no longer attempts to open a log stream when the service is not running.
+
+---
+
 ## [0.6.0] — 2026-03-21
 
 ### Added

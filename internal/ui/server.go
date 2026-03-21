@@ -125,6 +125,9 @@ func Start(currentVersion string) error {
 	mux.HandleFunc("/api/settings", withCORS(handleSettings))
 	mux.HandleFunc("/api/settings/autostart", withCORS(handleSettingsAutostart))
 	mux.HandleFunc("/api/xdebug/", withCORS(handleXdebugAction))
+	mux.HandleFunc("/api/lerd/start", withCORS(handleLerdStart))
+	mux.HandleFunc("/api/lerd/stop", withCORS(handleLerdStop))
+	mux.HandleFunc("/api/lerd/quit", withCORS(handleLerdQuit))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(indexHTML) //nolint:errcheck
@@ -1155,6 +1158,43 @@ func handleSettingsAutostart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, map[string]any{"ok": true, "autostart_on_login": body.Enabled})
+}
+
+func handleLerdStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := cli.RunStart(); err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func handleLerdStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := cli.RunStop(); err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func handleLerdQuit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Respond before quitting so the browser receives the response.
+	writeJSON(w, map[string]any{"ok": true})
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	go cli.RunQuit() //nolint:errcheck
 }
 
 func handleXdebugAction(w http.ResponseWriter, r *http.Request) {
