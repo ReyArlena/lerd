@@ -6,11 +6,12 @@ import (
 	"strings"
 )
 
-const githubReleasesBase = "https://github.com/geodro/lerd/releases"
+// ReleasesBaseURL is the base GitHub releases URL. Overridable in tests.
+var ReleasesBaseURL = "https://github.com/geodro/lerd/releases"
 
 // FetchLatestVersion returns the latest published release tag from GitHub.
 func FetchLatestVersion() (string, error) {
-	url := githubReleasesBase + "/latest"
+	url := ReleasesBaseURL + "/latest"
 	client := &http.Client{
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	lerdUpdate "github.com/geodro/lerd/internal/update"
 )
 
 // ── stripV ───────────────────────────────────────────────────────────────────
@@ -38,11 +40,11 @@ func TestFetchLatestVersion_success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
-	got, err := fetchLatestVersion()
+	got, err := lerdUpdate.FetchLatestVersion()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,11 +59,11 @@ func TestFetchLatestVersion_withoutVPrefix(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
-	got, err := fetchLatestVersion()
+	got, err := lerdUpdate.FetchLatestVersion()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -76,11 +78,11 @@ func TestFetchLatestVersion_notFound(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
-	_, err := fetchLatestVersion()
+	_, err := lerdUpdate.FetchLatestVersion()
 	if err == nil {
 		t.Fatal("expected error for 404 response, got nil")
 	}
@@ -92,11 +94,11 @@ func TestFetchLatestVersion_emptyTag(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
-	_, err := fetchLatestVersion()
+	_, err := lerdUpdate.FetchLatestVersion()
 	if err == nil {
 		t.Fatal("expected error for empty tag, got nil")
 	}
@@ -108,11 +110,11 @@ func TestFetchLatestVersion_serverError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
-	_, err := fetchLatestVersion()
+	_, err := lerdUpdate.FetchLatestVersion()
 	if err == nil {
 		t.Fatal("expected error for 500 response, got nil")
 	}
@@ -235,9 +237,9 @@ func TestRunUpdate_alreadyLatest(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	orig := githubReleasesBase
-	githubReleasesBase = srv.URL
-	defer func() { githubReleasesBase = orig }()
+	orig := lerdUpdate.ReleasesBaseURL
+	lerdUpdate.ReleasesBaseURL = srv.URL
+	defer func() { lerdUpdate.ReleasesBaseURL = orig }()
 
 	// Should return nil without downloading anything
 	err := runUpdate("1.0.0")

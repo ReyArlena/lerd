@@ -60,12 +60,13 @@ func runUpdate(currentVersion string) error {
 
 	// Show what's new between the current and latest version.
 	fmt.Println("\n==> What's new")
-	if changelog := lerdUpdate.FetchChangelog(cur, lat); changelog != "" {
+	changelog, _ := lerdUpdate.FetchChangelog(cur, lat)
+	if changelog != "" {
 		for _, line := range strings.Split(changelog, "\n") {
 			fmt.Println("  " + line)
 		}
 	} else {
-		fmt.Println("  (could not fetch changelog)")
+		fmt.Printf("  https://github.com/%s/releases/tag/v%s\n", githubRepo, lat)
 	}
 
 	// Ask for confirmation.

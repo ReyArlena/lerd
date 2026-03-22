@@ -3,6 +3,7 @@ package update
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -40,7 +41,7 @@ func CachedUpdateCheck(currentVersion string) (*UpdateInfo, error) {
 		return nil, nil
 	}
 
-	changelog := FetchChangelog(StripV(currentVersion), StripV(latest))
+	changelog, _ := FetchChangelog(StripV(currentVersion), StripV(latest))
 	return &UpdateInfo{
 		LatestVersion: latest,
 		Changelog:     changelog,
@@ -90,27 +91,27 @@ func WriteUpdateCache(version string) {
 
 // FetchChangelog downloads CHANGELOG.md from GitHub and returns the sections
 // for versions strictly greater than currentVersion and <= latestVersion.
-func FetchChangelog(currentVersion, latestVersion string) string {
+// Returns an empty string and a non-nil error when the fetch fails.
+func FetchChangelog(currentVersion, latestVersion string) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodGet, changelogRawURL, nil) //nolint:noctx
 	if err != nil {
-		return ""
+		return "", err
 	}
 	req.Header.Set("User-Agent", "lerd-cli")
 	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
-		}
-		return ""
+	if err != nil {
+		return "", err
 	}
 	defer resp.Body.Close()
-
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP %d fetching changelog", resp.StatusCode)
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return extractChangelogSections(string(body), currentVersion, latestVersion)
+	return extractChangelogSections(string(body), currentVersion, latestVersion), nil
 }
 
 // extractChangelogSections parses changelog markdown and returns sections where
