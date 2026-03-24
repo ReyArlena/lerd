@@ -36,6 +36,8 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`lerd php` and `lerd artisan` no longer break MCP stdio transport** — both commands now allocate a TTY (`-t`) only when stdin is a real terminal. When invoked by MCP or any other pipe-based tool, the TTY flag is omitted so stdin/stdout remain clean byte streams.
+
 - **Reverb toggle no longer appears on projects that don't use Reverb** — the UI previously showed the Reverb toggle for all Laravel sites because the built-in worker map always included `reverb`. It now gates on `cli.SiteUsesReverb()` (checks for `laravel/reverb` in composer.json or `BROADCAST_CONNECTION=reverb` in `.env`).
 
 ### Removed

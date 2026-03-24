@@ -10,6 +10,7 @@ import (
 	phpDet "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // NewArtisanCmd returns the artisan command — runs php artisan in the project's container.
@@ -46,7 +47,11 @@ func runArtisan(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("PHP %s FPM container is not running — start it with: systemctl --user start %s", version, container)
 	}
 
-	cmdArgs := []string{"exec", "-it", "-w", cwd, container, "php", "artisan"}
+	execFlags := []string{"exec", "-i"}
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		execFlags = append(execFlags, "-t")
+	}
+	cmdArgs := append(execFlags, "-w", cwd, container, "php", "artisan")
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)

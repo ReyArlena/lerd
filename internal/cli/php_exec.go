@@ -11,6 +11,7 @@ import (
 	phpDet "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // NewPhpCmd returns the php command — runs PHP in the appropriate FPM container.
@@ -58,13 +59,17 @@ func runPhp(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("PHP %s FPM container is not running — start it with: systemctl --user start %s", version, container)
 	}
 
-	cmdArgs := []string{
-		"exec", "-it", "-w", cwd,
-		"--env", "HOME=" + home,
-		"--env", "COMPOSER_HOME=" + composerHome,
-		"--env", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:" + composerBin,
-		container, "php",
+	execFlags := []string{"exec", "-i"}
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		execFlags = append(execFlags, "-t")
 	}
+
+	cmdArgs := append(execFlags, "-w", cwd,
+		"--env", "HOME="+home,
+		"--env", "COMPOSER_HOME="+composerHome,
+		"--env", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"+composerBin,
+		container, "php",
+	)
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)
