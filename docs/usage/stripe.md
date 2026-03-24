@@ -49,6 +49,10 @@ The target URL is auto-detected from the registered site in the current director
 lerd stripe:listen stop
 ```
 
+### HTTPS
+
+If you run `lerd secure` or `lerd unsecure` while the listener is active, Lerd automatically restarts it so `--forward-to` stays in sync with the site's current scheme. No manual restart needed.
+
 ### Logs
 
 ```bash

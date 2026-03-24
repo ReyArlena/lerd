@@ -32,9 +32,16 @@ Unsecuring the parent switches all worktree vhosts back to HTTP and updates thei
 
 ---
 
+## Stripe listener
+
+If a [Stripe webhook listener](../usage/stripe.md#stripelisten) is running for the site, toggling HTTPS automatically restarts it so `--forward-to` points at the correct `http://` or `https://` URL. No manual intervention required.
+
+---
+
 ## How it works
 
 1. `lerd install` generates a local CA with mkcert and installs it into the system trust store (NSS databases for Chrome/Firefox, and the system root store).
 2. `lerd secure <site>` issues a certificate signed by that CA for `<site>.test` **and** `*.<site>.test` (wildcard), so all subdomain worktrees are covered by a single cert.
 3. The nginx vhost is regenerated to listen on port 443 with the new cert, and port 80 redirects to HTTPS (302, not 301, so the redirect is not cached by browsers).
 4. `APP_URL` in the project's `.env` (and any worktree `.env` files) is updated to `https://`.
+5. If a `lerd stripe:listen` service is active for the site, it is restarted with the updated forwarding URL.

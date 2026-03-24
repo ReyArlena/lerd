@@ -81,3 +81,10 @@ func IsServiceEnabled(name string) bool {
 	out, _ := cmd.Output()
 	return strings.TrimSpace(string(out)) == "enabled"
 }
+
+// IsServiceActive returns true if the systemd user service is currently active.
+func IsServiceActive(name string) bool {
+	cmd := exec.Command("systemctl", "--user", "is-active", name)
+	out, _ := cmd.Output()
+	return strings.TrimSpace(string(out)) == "active"
+}

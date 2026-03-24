@@ -9,6 +9,7 @@ import (
 	"github.com/geodro/lerd/internal/config"
 	"github.com/geodro/lerd/internal/envfile"
 	"github.com/geodro/lerd/internal/nginx"
+	lerdSystemd "github.com/geodro/lerd/internal/systemd"
 	"github.com/spf13/cobra"
 )
 
@@ -75,6 +76,7 @@ func runSecure(_ *cobra.Command, args []string) error {
 	if err := nginx.Reload(); err != nil {
 		fmt.Printf("[WARN] nginx reload: %v\n", err)
 	}
+	restartStripeIfActive(site)
 	fmt.Printf("Secured: https://%s\n", site.Domain)
 	return nil
 }
@@ -106,8 +108,32 @@ func runUnsecure(_ *cobra.Command, args []string) error {
 	if err := nginx.Reload(); err != nil {
 		fmt.Printf("[WARN] nginx reload: %v\n", err)
 	}
+	restartStripeIfActive(site)
 	fmt.Printf("Unsecured: http://%s\n", site.Domain)
 	return nil
+}
+
+// restartStripeIfActive restarts the Stripe listener for the site if it is currently running,
+// so that --forward-to picks up the new http/https scheme.
+func restartStripeIfActive(site *config.Site) {
+	unitName := "lerd-stripe-" + site.Name
+	if !lerdSystemd.IsServiceActive(unitName) {
+		return
+	}
+	scheme := "http"
+	if site.Secured {
+		scheme = "https"
+	}
+	baseURL := scheme + "://" + site.Domain
+	if err := StripeStartForSite(site.Name, site.Path, baseURL); err != nil {
+		fmt.Printf("[WARN] updating stripe listener unit: %v\n", err)
+		return
+	}
+	if err := lerdSystemd.RestartService(unitName); err != nil {
+		fmt.Printf("[WARN] restarting stripe listener: %v\n", err)
+		return
+	}
+	fmt.Printf("  Restarted stripe listener → %s/stripe/webhook\n", baseURL)
 }
 
 // updateEnvAppURL sets APP_URL in the project's .env to scheme://domain.

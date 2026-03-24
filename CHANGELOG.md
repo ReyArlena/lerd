@@ -24,6 +24,8 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`lerd secure` / `lerd unsecure` restart the Stripe listener** — if a `lerd stripe:listen` service is active when HTTPS is toggled, it is automatically restarted with the updated forwarding URL so `--forward-to` stays in sync with the site's scheme.
+
 - **MinIO: per-site bucket created by `lerd env`** — when MinIO is detected, `lerd env` now creates a bucket named after the site handle (e.g. `my_project`), sets it to public access, and writes `AWS_BUCKET=<site>` and `AWS_URL=http://localhost:9000/<site>` into `.env`. Previously `AWS_BUCKET` was hardcoded to `lerd` and `AWS_URL` had no bucket path.
 
 - **`reverb:start` regenerates the nginx vhost** — running `lerd reverb:start` (or toggling Reverb in the web UI) now regenerates the site's nginx config and reloads nginx, ensuring the `/app` WebSocket proxy block is added to existing sites without requiring `lerd link` to be re-run.
