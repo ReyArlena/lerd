@@ -14,7 +14,7 @@
 | `lerd service expose <name> <host:container>` | Publish an extra port on a built-in service |
 | `lerd service expose <name> <host:container> --remove` | Remove a previously exposed port |
 
-Available services: `mysql`, `redis`, `postgres`, `meilisearch`, `minio`, `mailpit`.
+Available services: `mysql`, `redis`, `postgres`, `meilisearch`, `rustfs`, `mailpit`.
 
 ### Exposing extra ports on built-in services
 
@@ -59,17 +59,17 @@ Then apply with `lerd service restart mysql`.
 | PostgreSQL | 127.0.0.1 | lerd-postgres | 5432 | postgres | `lerd` | `lerd` |
 | Redis | 127.0.0.1 | lerd-redis | 6379 | — | — | — |
 | Meilisearch | 127.0.0.1 | lerd-meilisearch | 7700 | — | — | — |
-| MinIO | 127.0.0.1 | lerd-minio | 9000 | `lerd` | `lerdpassword` | per-site bucket |
+| RustFS | 127.0.0.1 | lerd-rustfs | 9000 | `lerd` | `lerdpassword` | per-site bucket |
 | Mailpit SMTP | 127.0.0.1 | lerd-mailpit | 1025 | — | — | — |
 
 Additional UIs:
 
-- MinIO console: `http://127.0.0.1:9001`
+- RustFS console: `http://127.0.0.1:9001`
 - Mailpit web UI: `http://127.0.0.1:8025`
 
-### MinIO — per-site buckets
+### RustFS — per-site buckets
 
-When `lerd env` detects MinIO (via `FILESYSTEM_DISK=s3` or `AWS_ENDPOINT` in `.env`), it automatically:
+RustFS is an S3-compatible object storage service (a drop-in replacement for MinIO). When `lerd env` detects it is needed (via `FILESYSTEM_DISK=s3` or `AWS_ENDPOINT` in `.env`), it automatically:
 
 1. Creates a bucket named after the site handle (e.g. `my_project`)
 2. Sets the bucket to **public access** (suitable for local development)
@@ -82,11 +82,45 @@ AWS_SECRET_ACCESS_KEY=lerdpassword
 AWS_DEFAULT_REGION=us-east-1
 AWS_BUCKET=my_project
 AWS_URL=http://localhost:9000/my_project
-AWS_ENDPOINT=http://lerd-minio:9000
+AWS_ENDPOINT=http://lerd-rustfs:9000
 AWS_USE_PATH_STYLE_ENDPOINT=true
 ```
 
 `AWS_URL` points to the public bucket URL (browser-reachable). `AWS_ENDPOINT` is the internal container address used by PHP.
+
+### Migrating from MinIO to RustFS
+
+RustFS exposes the same S3 API as MinIO with the same default credentials — no application changes are needed after migration.
+
+**Automatic prompt during `lerd update`**
+
+If lerd detects an existing MinIO data directory (`~/.local/share/lerd/data/minio`) during `lerd update`, it will offer to migrate automatically:
+
+```
+==> MinIO detected — migrate to RustFS? [y/N]
+```
+
+Answering `y` runs the full migration in-place. The update continues regardless of your answer.
+
+**Manual migration**
+
+```bash
+lerd minio:migrate
+```
+
+This command:
+
+1. Stops the `lerd-minio` container (if running)
+2. Removes the MinIO quadlet so it no longer auto-starts
+3. Copies `~/.local/share/lerd/data/minio/` → `~/.local/share/lerd/data/rustfs/`
+4. Updates `~/.config/lerd/config.yaml` — removes the `minio` entry and adds `rustfs`
+5. Installs and starts the `lerd-rustfs` service
+
+The original MinIO data directory is **not deleted** — verify the migration works, then remove it manually:
+
+```bash
+rm -rf ~/.local/share/lerd/data/minio
+```
 
 ---
 
@@ -287,7 +321,7 @@ depends_on:
   - redis
 ```
 
-Dependencies can be built-in services (`mysql`, `redis`, `postgres`, `meilisearch`, `minio`, `mailpit`) or other custom services.
+Dependencies can be built-in services (`mysql`, `redis`, `postgres`, `meilisearch`, `rustfs`, `mailpit`) or other custom services.
 
 !!! note
     Circular dependencies (A depends on B, B depends on A) are not detected at definition time. The start cycle is naturally broken because a service already active is skipped. Avoid circular configurations.

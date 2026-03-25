@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "minio", "mailpit"}
+var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "rustfs", "mailpit"}
 
 // serviceInfo holds the quadlet name and Laravel .env hints for a service.
 type serviceInfo struct {
@@ -47,14 +47,14 @@ var serviceEnvVars = map[string]serviceInfo{
 		"SCOUT_DRIVER=meilisearch",
 		"MEILISEARCH_HOST=http://lerd-meilisearch:7700",
 	}},
-	"minio": {envVars: []string{
+	"rustfs": {envVars: []string{
 		"FILESYSTEM_DISK=s3",
 		"AWS_ACCESS_KEY_ID=lerd",
 		"AWS_SECRET_ACCESS_KEY=lerdpassword",
 		"AWS_DEFAULT_REGION=us-east-1",
 		"AWS_BUCKET=lerd",
 		"AWS_URL=http://localhost:9000",
-		"AWS_ENDPOINT=http://lerd-minio:9000",
+		"AWS_ENDPOINT=http://lerd-rustfs:9000",
 		"AWS_USE_PATH_STYLE_ENDPOINT=true",
 	}},
 	"mailpit": {envVars: []string{
@@ -81,7 +81,7 @@ func isKnownService(name string) bool {
 func NewServiceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service",
-		Short: "Manage Lerd services (mysql, redis, postgres, meilisearch, minio, mailpit)",
+		Short: "Manage Lerd services (mysql, redis, postgres, meilisearch, rustfs, mailpit)",
 	}
 
 	cmd.AddCommand(newServiceStartCmd())

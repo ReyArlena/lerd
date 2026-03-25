@@ -53,7 +53,7 @@ var iconMaskable512PNG []byte
 
 const listenAddr = "0.0.0.0:7073"
 
-var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "minio", "mailpit"}
+var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "rustfs", "mailpit"}
 
 var serviceEnvVars = map[string][]string{
 	"mysql": {
@@ -84,14 +84,14 @@ var serviceEnvVars = map[string][]string{
 		"SCOUT_DRIVER=meilisearch",
 		"MEILISEARCH_HOST=http://lerd-meilisearch:7700",
 	},
-	"minio": {
+	"rustfs": {
 		"FILESYSTEM_DISK=s3",
 		"AWS_ACCESS_KEY_ID=lerd",
 		"AWS_SECRET_ACCESS_KEY=lerdpassword",
 		"AWS_DEFAULT_REGION=us-east-1",
 		"AWS_BUCKET=lerd",
 		"AWS_URL=http://localhost:9000",
-		"AWS_ENDPOINT=http://lerd-minio:9000",
+		"AWS_ENDPOINT=http://lerd-rustfs:9000",
 		"AWS_USE_PATH_STYLE_ENDPOINT=true",
 	},
 	"mailpit": {
@@ -530,7 +530,7 @@ type ServiceResponse struct {
 // builtinDashboards maps built-in service names to their dashboard URLs.
 var builtinDashboards = map[string]string{
 	"mailpit":     "http://localhost:8025",
-	"minio":       "http://localhost:9001",
+	"rustfs":      "http://localhost:9001",
 	"meilisearch": "http://localhost:7700",
 }
 

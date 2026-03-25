@@ -66,7 +66,7 @@ var serviceDetectors = map[string]func(map[string]string) bool{
 	"meilisearch": func(env map[string]string) bool {
 		return strings.ToLower(env["SCOUT_DRIVER"]) == "meilisearch"
 	},
-	"minio": func(env map[string]string) bool {
+	"rustfs": func(env map[string]string) bool {
 		_, hasEndpoint := env["AWS_ENDPOINT"]
 		return strings.ToLower(env["FILESYSTEM_DISK"]) == "s3" || hasEndpoint
 	},
@@ -216,13 +216,13 @@ func runEnv(_ *cobra.Command, _ []string) error {
 				continue
 			}
 
-			if svc == "minio" {
+			if svc == "rustfs" {
 				updates["AWS_BUCKET"] = dbName
 				updates["AWS_URL"] = "http://localhost:9000/" + dbName
 				if err := ensureServiceRunning(svc); err != nil {
 					fmt.Printf("  [WARN] could not start %s: %v\n", svc, err)
 				} else {
-					created, err := createMinioBucket(dbName)
+					created, err := createS3Bucket(dbName)
 					if err != nil {
 						fmt.Printf("  [WARN] could not create bucket %q: %v\n", dbName, err)
 					} else if created {
@@ -357,27 +357,29 @@ func createDatabase(svc, name string) (bool, error) {
 	}
 }
 
-// createMinioBucket creates a MinIO bucket for the given name in lerd-minio.
+// createS3Bucket creates a bucket for the given name in lerd-rustfs using an ephemeral mc container.
 // Returns (true, nil) if created, (false, nil) if it already existed, or (false, err) on failure.
-func createMinioBucket(name string) (bool, error) {
-	const alias = "lerd"
-	aliasCmd := exec.Command("podman", "exec", "lerd-minio",
-		"mc", "alias", "set", alias, "http://localhost:9000", "lerd", "lerdpassword")
-	if out, err := aliasCmd.CombinedOutput(); err != nil {
-		return false, fmt.Errorf("mc alias set: %s", strings.TrimSpace(string(out)))
-	}
+func createS3Bucket(name string) (bool, error) {
+	const (
+		alias   = "lerd"
+		mcImage = "docker.io/minio/mc:latest"
+		mcEnv   = "MC_HOST_lerd=http://lerd:lerdpassword@lerd-rustfs:9000"
+	)
 
-	lsCmd := exec.Command("podman", "exec", "lerd-minio", "mc", "ls", alias+"/"+name)
+	lsCmd := exec.Command("podman", "run", "--rm", "--network", "lerd",
+		"-e", mcEnv, mcImage, "ls", alias+"/"+name)
 	if err := lsCmd.Run(); err == nil {
 		return false, nil
 	}
 
-	mbCmd := exec.Command("podman", "exec", "lerd-minio", "mc", "mb", alias+"/"+name)
+	mbCmd := exec.Command("podman", "run", "--rm", "--network", "lerd",
+		"-e", mcEnv, mcImage, "mb", alias+"/"+name)
 	if out, err := mbCmd.CombinedOutput(); err != nil {
 		return false, fmt.Errorf("%s", strings.TrimSpace(string(out)))
 	}
 
-	pubCmd := exec.Command("podman", "exec", "lerd-minio", "mc", "anonymous", "set", "public", alias+"/"+name)
+	pubCmd := exec.Command("podman", "run", "--rm", "--network", "lerd",
+		"-e", mcEnv, mcImage, "anonymous", "set", "public", alias+"/"+name)
 	if out, err := pubCmd.CombinedOutput(); err != nil {
 		return false, fmt.Errorf("mc anonymous set public: %s", strings.TrimSpace(string(out)))
 	}

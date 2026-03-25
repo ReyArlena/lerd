@@ -265,7 +265,7 @@ Start or stop any service — built-in or custom. ` + bt + `service_stop` + bt +
 
 **Dependency cascade:** if a custom service has ` + bt + `depends_on` + bt + ` set, starting its dependency also starts it; stopping the dependency stops it first. Starting the custom service directly ensures its dependencies start first.
 
-Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `. Custom service names (registered with ` + bt + `service_add` + bt + `) are also accepted — just pass the same name used in ` + bt + `service_add` + bt + `.
+Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `rustfs` + bt + `, ` + bt + `mailpit` + bt + `. Custom service names (registered with ` + bt + `service_add` + bt + `) are also accepted — just pass the same name used in ` + bt + `service_add` + bt + `.
 
 **.env values for built-in lerd services:**
 
@@ -276,13 +276,13 @@ Built-in names: ` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `
 | redis | ` + bt + `lerd-redis` + bt + ` | ` + bt + `REDIS_PASSWORD=null` + bt + ` |
 | mailpit | ` + bt + `lerd-mailpit:1025` + bt + ` | web UI: http://localhost:8025 |
 | meilisearch | ` + bt + `lerd-meilisearch:7700` + bt + ` | |
-| minio | ` + bt + `lerd-minio:9000` + bt + ` | ` + bt + `AWS_USE_PATH_STYLE_ENDPOINT=true` + bt + ` |
+| rustfs | ` + bt + `lerd-rustfs:9000` + bt + ` | ` + bt + `AWS_USE_PATH_STYLE_ENDPOINT=true` + bt + ` |
 
 ### ` + bt + `service_expose` + bt + `
 Add or remove an extra published port on a built-in service. The mapping is persisted in ` + bt + `~/.config/lerd/config.yaml` + bt + ` and applied on every start. The service is restarted automatically if running.
 
 Arguments:
-- ` + bt + `name` + bt + ` (required): built-in service name (` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `minio` + bt + `, ` + bt + `mailpit` + bt + `)
+- ` + bt + `name` + bt + ` (required): built-in service name (` + bt + `mysql` + bt + `, ` + bt + `redis` + bt + `, ` + bt + `postgres` + bt + `, ` + bt + `meilisearch` + bt + `, ` + bt + `rustfs` + bt + `, ` + bt + `mailpit` + bt + `)
 - ` + bt + `port` + bt + ` (required): mapping as ` + bt + `"host:container"` + bt + `, e.g. ` + bt + `"13306:3306"` + bt + `
 - ` + bt + `remove` + bt + ` (optional): set to ` + bt + `true` + bt + ` to remove the mapping instead of adding it
 

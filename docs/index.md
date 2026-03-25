@@ -2,7 +2,7 @@
 
 **A Herd-like local PHP development environment for Linux** — Podman-native, rootless, zero system dependencies.
 
-Lerd bundles Nginx, PHP-FPM, and optional services (MySQL, Redis, PostgreSQL, Meilisearch, MinIO) as rootless Podman containers, giving you automatic `.test` domain routing, per-project PHP/Node version isolation, and one-command TLS — all without touching your system's PHP or web server. Laravel-first, with built-in support for Symfony, WordPress, and any PHP framework via YAML definitions.
+Lerd bundles Nginx, PHP-FPM, and optional services (MySQL, Redis, PostgreSQL, Meilisearch, RustFS) as rootless Podman containers, giving you automatic `.test` domain routing, per-project PHP/Node version isolation, and one-command TLS — all without touching your system's PHP or web server. Laravel-first, with built-in support for Symfony, WordPress, and any PHP framework via YAML definitions.
 
 ---
 

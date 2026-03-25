@@ -93,6 +93,7 @@
 | `lerd service unpin <name>` | Unpin a service so it can be auto-stopped when unused |
 | `lerd service add [file.yaml]` | Register a new custom service (from a YAML file or flags) |
 | `lerd service remove <name>` | Stop and remove a custom service |
+| `lerd minio:migrate` | Migrate existing MinIO data to RustFS |
 
 ## Database
 

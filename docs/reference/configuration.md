@@ -21,7 +21,7 @@ services:
   redis:       { enabled: true,  image: "redis:7-alpine",               port: 6379 }
   postgres:    { enabled: false, image: "postgres:16-alpine",           port: 5432 }
   meilisearch: { enabled: false, image: "getmeili/meilisearch:v1.7",    port: 7700 }
-  minio:       { enabled: false, image: "minio/minio:latest",           port: 9000 }
+  rustfs:      { enabled: false, image: "rustfs/rustfs:latest",         port: 9000 }
   mailpit:     { enabled: false, image: "axllent/mailpit:latest",       port: 1025 }
 ```
 

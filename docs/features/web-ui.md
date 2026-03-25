@@ -49,7 +49,7 @@ Lists all registered projects with their domain, path, PHP version, Node version
 
 ## Services tab
 
-Shows all available services (MySQL, Redis, PostgreSQL, Meilisearch, MinIO, Mailpit) with their current status. Start or stop any service with one click; each panel shows the correct `.env` connection values with a one-click copy button.
+Shows all available services (MySQL, Redis, PostgreSQL, Meilisearch, RustFS, Mailpit) with their current status. Start or stop any service with one click; each panel shows the correct `.env` connection values with a one-click copy button.
 
 Workers (queue, schedule, reverb, and any custom framework workers), Stripe listeners, and infrastructure services are shown together. Per-site worker services are grouped into collapsible accordions (Queues, Schedules, Reverb, Workers). Click a group header to expand it and see the individual per-site entries; only one group is open at a time.
 

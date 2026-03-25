@@ -94,6 +94,7 @@ func main() {
 	root.AddCommand(cli.NewFrameworkCmd())
 	root.AddCommand(cli.NewWorkerCmd())
 	root.AddCommand(cli.NewSetupCmd())
+	root.AddCommand(cli.NewMinioMigrateCmd())
 	root.AddCommand(cli.NewPauseCmd())
 	root.AddCommand(cli.NewUnpauseCmd())
 	root.AddCommand(cli.NewTrayCmd())

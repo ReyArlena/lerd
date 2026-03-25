@@ -47,7 +47,7 @@ type FrameworkEnvConf struct {
 	URLKey string `yaml:"url_key,omitempty"`
 
 	// Services defines per-service detection rules and env vars to apply.
-	// Keys match the built-in service names: mysql, postgres, redis, meilisearch, minio, mailpit.
+	// Keys match the built-in service names: mysql, postgres, redis, meilisearch, rustfs, mailpit.
 	Services map[string]FrameworkServiceDef `yaml:"services,omitempty"`
 }
 

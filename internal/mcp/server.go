@@ -25,7 +25,7 @@ import (
 
 const protocolVersion = "2024-11-05"
 
-var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "minio", "mailpit"}
+var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "rustfs", "mailpit"}
 
 // builtinServiceEnv mirrors the serviceEnvVars map in internal/cli/services.go.
 // Returns the recommended Laravel .env KEY=VALUE pairs for each built-in service.
@@ -58,14 +58,14 @@ var builtinServiceEnv = map[string][]string{
 		"SCOUT_DRIVER=meilisearch",
 		"MEILISEARCH_HOST=http://lerd-meilisearch:7700",
 	},
-	"minio": {
+	"rustfs": {
 		"FILESYSTEM_DISK=s3",
 		"AWS_ACCESS_KEY_ID=lerd",
 		"AWS_SECRET_ACCESS_KEY=lerdpassword",
 		"AWS_DEFAULT_REGION=us-east-1",
 		"AWS_BUCKET=lerd",
 		"AWS_URL=http://localhost:9000",
-		"AWS_ENDPOINT=http://lerd-minio:9000",
+		"AWS_ENDPOINT=http://lerd-rustfs:9000",
 		"AWS_USE_PATH_STYLE_ENDPOINT=true",
 	},
 	"mailpit": {
@@ -240,7 +240,7 @@ func toolList() []mcpTool {
 				Properties: map[string]mcpProp{
 					"name": {
 						Type:        "string",
-						Description: "Service to start (built-in: mysql, redis, postgres, meilisearch, minio, mailpit — or any custom service name registered with service_add)",
+						Description: "Service to start (built-in: mysql, redis, postgres, meilisearch, rustfs, mailpit — or any custom service name registered with service_add)",
 					},
 				},
 				Required: []string{"name"},
@@ -254,7 +254,7 @@ func toolList() []mcpTool {
 				Properties: map[string]mcpProp{
 					"name": {
 						Type:        "string",
-						Description: "Service to stop (built-in: mysql, redis, postgres, meilisearch, minio, mailpit — or any custom service name registered with service_add)",
+						Description: "Service to stop (built-in: mysql, redis, postgres, meilisearch, rustfs, mailpit — or any custom service name registered with service_add)",
 					},
 				},
 				Required: []string{"name"},
@@ -416,7 +416,7 @@ func toolList() []mcpTool {
 				Properties: map[string]mcpProp{
 					"name": {
 						Type:        "string",
-						Description: "Built-in service name (mysql, redis, postgres, meilisearch, minio, mailpit)",
+						Description: "Built-in service name (mysql, redis, postgres, meilisearch, rustfs, mailpit)",
 					},
 					"port": {
 						Type:        "string",
@@ -916,7 +916,7 @@ func toolList() []mcpTool {
 				Properties: map[string]mcpProp{
 					"name": {
 						Type:        "string",
-						Description: "Service name to pin (built-in: mysql, redis, postgres, meilisearch, minio, mailpit — or any custom service name)",
+						Description: "Service name to pin (built-in: mysql, redis, postgres, meilisearch, rustfs, mailpit — or any custom service name)",
 					},
 				},
 				Required: []string{"name"},

@@ -48,7 +48,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		config.DnsmasqDir(), config.QuadletDir(), config.SystemdUserDir(),
 		config.DataSubDir("mysql"), config.DataSubDir("redis"),
 		config.DataSubDir("postgres"), config.DataSubDir("meilisearch"),
-		config.DataSubDir("minio"), config.DataSubDir("mailpit"),
+		config.DataSubDir("rustfs"), config.DataSubDir("mailpit"),
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
@@ -147,7 +147,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	ok()
 
 	step("Refreshing service quadlets")
-	for _, svc := range []string{"mysql", "redis", "postgres", "meilisearch", "minio", "mailpit"} {
+	for _, svc := range []string{"mysql", "redis", "postgres", "meilisearch", "rustfs", "mailpit"} {
 		if !podman.QuadletInstalled("lerd-" + svc) {
 			continue
 		}

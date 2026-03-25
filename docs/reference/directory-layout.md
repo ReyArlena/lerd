@@ -22,7 +22,7 @@
 │   ├── redis/
 │   ├── postgres/
 │   ├── meilisearch/
-│   └── minio/
+│   └── rustfs/
 ├── dnsmasq/
 │   └── lerd.conf
 └── sites.yaml

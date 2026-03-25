@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/geodro/lerd/internal/config"
 	phpPkg "github.com/geodro/lerd/internal/php"
 	"github.com/geodro/lerd/internal/podman"
 	lerdUpdate "github.com/geodro/lerd/internal/update"
@@ -125,6 +126,19 @@ func runUpdate(currentVersion string) error {
 	installCmd.Stdin = os.Stdin
 	if err := installCmd.Run(); err != nil {
 		return err
+	}
+
+	// Offer MinIO → RustFS migration if legacy data directory exists.
+	if _, err := os.Stat(config.DataSubDir("minio")); err == nil {
+		fmt.Print("\n==> MinIO detected — migrate to RustFS? [y/N] ")
+		migrateReader := bufio.NewReader(os.Stdin)
+		migrateAnswer, _ := migrateReader.ReadString('\n')
+		migrateAnswer = strings.TrimSpace(strings.ToLower(migrateAnswer))
+		if migrateAnswer == "y" || migrateAnswer == "yes" {
+			if err := runMinioMigrate(nil, nil); err != nil {
+				fmt.Fprintf(os.Stderr, "  warn: migration failed: %v\n", err)
+			}
+		}
 	}
 
 	// Only rebuild PHP-FPM images if the embedded Containerfile changed.

@@ -68,9 +68,9 @@ func defaultConfig() *GlobalConfig {
 			Image:   "getmeili/meilisearch:v1.7",
 			Port:    7700,
 		},
-		"minio": {
+		"rustfs": {
 			Enabled: false,
-			Image:   "minio/minio:latest",
+			Image:   "rustfs/rustfs:latest",
 			Port:    9000,
 		},
 		"mailpit": {

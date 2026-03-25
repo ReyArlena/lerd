@@ -9,10 +9,21 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [1.0.2] — 2026-03-25
+
 ### Added
 
+- **RustFS replaces MinIO** — MinIO OSS is no longer maintained; lerd now ships RustFS as its built-in S3-compatible object storage service. RustFS exposes the same API and credentials (`lerd` / `lerdpassword`) so no application changes are needed. Closes [#3](https://github.com/geodro/lerd/issues/3).
+- **`lerd minio:migrate`** — one-command migration from an existing MinIO installation to RustFS. Stops the MinIO container, copies data to the RustFS data directory, removes the MinIO quadlet, updates `config.yaml`, and starts RustFS. The original MinIO data directory is preserved for manual cleanup.
+- **Auto-migration prompt during `lerd update`** — if a MinIO data directory is detected at update time, lerd offers to run the migration automatically before continuing.
 - **`lerd.localhost` custom domain** — the Lerd dashboard is now accessible at `http://lerd.localhost` (nginx proxies the domain to the UI service). `lerd dashboard` opens the new URL. `.localhost` resolves to `127.0.0.1` natively on all modern systems with no DNS configuration.
 - **Installable PWA** — the dashboard ships a web app manifest (`/manifest.webmanifest`) and SVG icons so it can be installed as a standalone app from Chrome or other PWA-capable browsers.
+
+### Fixed
+
+- **502 Bad Gateway on Inertia.js full-page refreshes** — nginx vhost templates now include `fastcgi_buffers 16 16k` and `fastcgi_buffer_size 32k`, preventing `upstream sent too big header` errors caused by large FastCGI response headers (common on routes with heavy session/flash data).
 
 ---
 
