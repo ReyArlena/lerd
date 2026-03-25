@@ -1,6 +1,22 @@
 # Web UI
 
-Lerd includes a browser dashboard, served at **`http://127.0.0.1:7073`** by the `lerd-ui` systemd service (started automatically with `lerd install`).
+Lerd includes a browser dashboard available at **`http://lerd.localhost`**, served by the `lerd-ui` systemd service (started automatically with `lerd install`).
+
+```bash
+lerd dashboard   # open in your default browser
+```
+
+The `.localhost` TLD resolves to `127.0.0.1` natively on all modern systems — no DNS configuration needed. The dashboard is also reachable directly at `http://127.0.0.1:7073` if nginx is not running.
+
+## Install as an app
+
+The dashboard is a Progressive Web App (PWA). You can install it as a standalone desktop app from any Chromium-based browser (Chrome, Brave, Edge):
+
+1. Open `http://lerd.localhost`
+2. Click the **install** icon (⊕) in the address bar
+3. Click **Install**
+
+Once installed, Lerd opens in its own window without browser chrome, just like a native app.
 
 ---
 

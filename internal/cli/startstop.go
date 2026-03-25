@@ -121,6 +121,9 @@ func runStart(_ *cobra.Command, _ []string) error {
 	if err := nginx.EnsureNginxConfig(); err != nil {
 		fmt.Printf("  WARN: nginx config: %v\n", err)
 	}
+	if err := nginx.EnsureLerdVhost(); err != nil {
+		fmt.Printf("  WARN: lerd vhost: %v\n", err)
+	}
 
 	units := append(coreUnits(), installedServiceUnits()...)
 	units = append(units, "lerd-ui", "lerd-watcher")

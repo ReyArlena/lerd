@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const dashboardURL = "http://127.0.0.1:7073"
+const dashboardURL = "http://lerd.localhost"
 
 // NewDashboardCmd returns the dashboard command.
 func NewDashboardCmd() *cobra.Command {

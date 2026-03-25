@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lerd</title>
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#FF2D20">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lerd">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -49,9 +56,7 @@
 
         <!-- Logo + version -->
         <div class="flex items-center gap-2.5 order-1">
-          <svg class="w-6 h-6 text-lerd-red" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
+          <img src="/icons/icon.svg" class="w-7 h-7 rounded-lg" alt="Lerd">
           <span class="font-bold text-gray-900 dark:text-white tracking-tight text-lg">Lerd</span>
           <span class="text-xs text-gray-400 dark:text-gray-600 font-mono" x-text="'v' + version.current"></span>
         </div>

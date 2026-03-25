@@ -33,6 +33,24 @@ import (
 //go:embed index.html
 var indexHTML []byte
 
+//go:embed icons/icon.svg
+var iconSVG []byte
+
+//go:embed icons/icon-maskable.svg
+var iconMaskableSVG []byte
+
+//go:embed icons/icon-192.png
+var icon192PNG []byte
+
+//go:embed icons/icon-512.png
+var icon512PNG []byte
+
+//go:embed icons/icon-maskable-192.png
+var iconMaskable192PNG []byte
+
+//go:embed icons/icon-maskable-512.png
+var iconMaskable512PNG []byte
+
 const listenAddr = "0.0.0.0:7073"
 
 var knownServices = []string{"mysql", "redis", "postgres", "meilisearch", "minio", "mailpit"}
@@ -120,6 +138,35 @@ func Start(currentVersion string) error {
 	mux.HandleFunc("/api/lerd/start", withCORS(handleLerdStart))
 	mux.HandleFunc("/api/lerd/stop", withCORS(handleLerdStop))
 	mux.HandleFunc("/api/lerd/quit", withCORS(handleLerdQuit))
+	mux.HandleFunc("/manifest.webmanifest", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/manifest+json")
+		base := "http://" + r.Host
+		w.Write([]byte(`{"name":"Lerd","short_name":"Lerd","description":"Local Laravel development environment","start_url":"` + base + `/","display":"standalone","background_color":"#0d0d0d","theme_color":"#FF2D20","icons":[{"src":"` + base + `/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"` + base + `/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"` + base + `/icons/icon-maskable-192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},{"src":"` + base + `/icons/icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"},{"src":"` + base + `/icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}`)) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon.svg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(iconSVG) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon-maskable.svg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(iconMaskableSVG) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon-192.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(icon192PNG) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon-512.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(icon512PNG) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon-maskable-192.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(iconMaskable192PNG) //nolint:errcheck
+	})
+	mux.HandleFunc("/icons/icon-maskable-512.png", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(iconMaskable512PNG) //nolint:errcheck
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(indexHTML) //nolint:errcheck

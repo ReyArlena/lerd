@@ -7,6 +7,15 @@ Lerd uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`lerd.localhost` custom domain** — the Lerd dashboard is now accessible at `http://lerd.localhost` (nginx proxies the domain to the UI service). `lerd dashboard` opens the new URL. `.localhost` resolves to `127.0.0.1` natively on all modern systems with no DNS configuration.
+- **Installable PWA** — the dashboard ships a web app manifest (`/manifest.webmanifest`) and SVG icons so it can be installed as a standalone app from Chrome or other PWA-capable browsers.
+
+---
+
 ## [1.0.1] — 2026-03-25
 
 ### Added

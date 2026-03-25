@@ -98,6 +98,9 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	if err := nginx.EnsureDefaultVhost(); err != nil {
 		return err
 	}
+	if err := nginx.EnsureLerdVhost(); err != nil {
+		return err
+	}
 	ok()
 
 	step("Regenerating vhosts")

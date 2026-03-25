@@ -377,6 +377,11 @@ func EnsureDefaultVhost() error {
 	return os.WriteFile(filepath.Join(config.NginxConfD(), "_default.conf"), []byte(content), 0644)
 }
 
+// EnsureLerdVhost generates the nginx proxy vhost for lerd.localhost → host:7073.
+func EnsureLerdVhost() error {
+	return GenerateProxyVhost("lerd.localhost", "host.containers.internal", 7073)
+}
+
 // EnsureNginxConfig copies the base nginx.conf to the data dir if it is missing.
 func EnsureNginxConfig() error {
 	nginxDir := config.NginxDir()
